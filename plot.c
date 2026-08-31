@@ -1618,19 +1618,20 @@ static void draw_frequencies(void) {
       lcd_printf(FREQUENCIES_XPOS1, FREQUENCIES_YPOS, "%c%s %15q" S_Hz, lm0, "START", get_sweep_frequency(ST_START));
       lcd_printf(FREQUENCIES_XPOS2, FREQUENCIES_YPOS, "%c%s %15q" S_Hz, lm1,  "STOP", get_sweep_frequency(ST_STOP));
     } else if (FREQ_IS_CENTERSPAN()) {
-      lcd_printf(FREQUENCIES_XPOS1, FREQUENCIES_YPOS, "%c%s %15q" S_Hz, lm0,"CENTER", get_sweep_frequency(ST_CENTER));
-      lcd_printf(FREQUENCIES_XPOS2, FREQUENCIES_YPOS, "%c%s %15q" S_Hz, lm1,  "SPAN", get_sweep_frequency(ST_SPAN));
+      // start on the left, stop on the right; center + bandwidth in the middle (below)
+      lcd_printf(FREQUENCIES_XPOS1, FREQUENCIES_YPOS, "START %q" S_Hz, get_sweep_frequency(ST_START));
+      lcd_printf(LCD_WIDTH - sFONT_STR_WIDTH(17), FREQUENCIES_YPOS, "STOP %q" S_Hz, get_sweep_frequency(ST_STOP));
     }
   } else {
     lcd_printf(FREQUENCIES_XPOS1, FREQUENCIES_YPOS, "START 0" S_SECOND "    VF = %d%%", velocity_factor);
     lcd_printf(FREQUENCIES_XPOS2, FREQUENCIES_YPOS, "STOP %F" S_SECOND " (%F" S_METRE ")", time_of_index(sweep_points-1), distance_of_index(sweep_points-1));
   }
-  // Center slot: in center/bandwidth mode show the resulting sweep edges,
-  // otherwise the IF bandwidth and point count.
+  // Center slot: center frequency + bandwidth in center/BW mode, otherwise
+  // the IF bandwidth and point count.
   lcd_set_foreground(LCD_BW_TEXT_COLOR);
   if ((props_mode & DOMAIN_MODE) == DOMAIN_FREQ && FREQ_IS_CENTERSPAN() && !FREQ_IS_CW())
-    lcd_printf(FREQUENCIES_XPOS3, FREQUENCIES_YPOS, "%.4f" S_RARROW "%.4f MHz",
-               get_sweep_frequency(ST_START) / 1e6, get_sweep_frequency(ST_STOP) / 1e6);
+    lcd_printf(LCD_WIDTH/2 - sFONT_STR_WIDTH(15), FREQUENCIES_YPOS, "%cCENTER %q" S_Hz "  %cBW %F" S_Hz,
+               lm0, get_sweep_frequency(ST_CENTER), lm1, (float)get_sweep_frequency(ST_SPAN));
   else
     lcd_printf(FREQUENCIES_XPOS3, FREQUENCIES_YPOS,"BW:%u" S_Hz " %up", get_bandwidth_frequency(config._bandwidth), sweep_points);
   lcd_set_font(FONT_NORMAL);
