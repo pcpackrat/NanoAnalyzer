@@ -2593,7 +2593,6 @@ const menuitem_t menu_top[] = {
   { MT_SUBMENU, 0, "MARKER",    menu_marker },
   { MT_SUBMENU, 0, "CUSTOM\n FREQ / BW", menu_stimulus },
   { MT_SUBMENU, 0, "CALIBRATE", menu_cal },
-  { MT_SUBMENU, 0, "RECALL",    menu_recall },
 #ifdef __VNA_MEASURE_MODULE__
   { MT_CALLBACK,0, "MEASURE",   menu_measure_cb },
 #endif

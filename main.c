@@ -3387,10 +3387,19 @@ int main(void)
   lcd_init();
 
 /*
+ * NanoAnalyzer boot splash
+ */
+  lcd_set_colors(LCD_FG_COLOR, LCD_BG_COLOR);
+  lcd_clear_screen();
+  lcd_drawstring_size("NanoAnalyzer", 72, 96, 4);
+  lcd_drawstring(96, 150, "S11 antenna analyzer   " VERSION);
+  lcd_drawstring(96, 168, "Build: " __DATE__ " " __TIME__);
+
+/*
  * tlv320aic Initialize (audio codec)
  */
   tlv320aic3204_init();
-  chThdSleepMilliseconds(200); // Wait for aic codec start
+  chThdSleepMilliseconds(1000); // hold the splash / wait for aic codec start
 /*
  * I2S Initialize
  */
