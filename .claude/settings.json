@@ -5,7 +5,11 @@
       "Bash(git pull *)",
       "Bash(git push *)",
       "Bash(git add *)",
-      "Bash(git commit *)"
+      "Bash(git commit *)",
+      "Bash(ssh nanovm *)",
+      "Bash(git commit -q -m 'plot: bottom bar in center/BW mode - START left, CENTER+BW middle, STOP right *)",
+      "Bash(git commit -q -m 'plot: fixed 3-decimal MHz on bottom-bar frequencies *)",
+      "Bash(ssh nanovm 'cd ~/src/NanoAnalyzer && SHA=$\\(git rev-parse --short HEAD\\) && D=$\\(date +%Y%m%d\\) && cp build/H4.bin bin/H4.bin && cp build/H4.bin \"bin/archive/H4-${D}-${SHA}.bin\" && git add bin/ && git commit -q -m \"build: 3-decimal MHz bar at ${SHA} *)"
     ]
   }
 }

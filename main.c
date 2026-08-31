@@ -1008,6 +1008,7 @@ static void load_settings(void) {
       caldata_recall(0);   // Try load 0 slot
   } else
     caldata_recall(0);   // Try load 0 slot
+  bands_init();
   update_frequencies();
 #ifdef __VNA_MEASURE_MODULE__
   plot_set_measure_mode(current_props._measure);
@@ -1018,6 +1019,7 @@ static void load_settings(void) {
   load_default_properties();
   config_recall();
   load_properties(0);
+  bands_init();
 }
 #endif
 

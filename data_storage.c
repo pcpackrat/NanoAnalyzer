@@ -115,7 +115,37 @@ int caldata_recall(uint32_t id) {
 void clear_all_config_prop_data(void) {
   lastsaveid = NO_SAVE_SLOT;
   checksum_ok = 0;
-  // unlock and erase flash pages
-  flash_erase_pages(SAVE_PROP_CONFIG_ADDR, SAVE_FULL_AREA_SIZE);
+  // unlock and erase flash pages (band preset page sits just below the properties area)
+  flash_erase_pages(SAVE_BANDS_ADDR, SAVE_BANDS_SIZE + SAVE_FULL_AREA_SIZE);
+}
+
+//
+// NanoAnalyzer band preset table storage
+//
+#define BANDS_MAGIC 0x31444e42  // "BND1"
+
+typedef struct {
+  uint32_t      magic;
+  band_preset_t band[BANDS_MAX];
+  uint32_t      checksum;
+} band_store_t;
+
+int bands_save(void) {
+  band_store_t s;
+  s.magic = BANDS_MAGIC;
+  memcpy(s.band, bands, sizeof(bands));
+  s.checksum = checksum(&s, sizeof s - sizeof s.checksum);
+  flash_erase_pages(SAVE_BANDS_ADDR, SAVE_BANDS_SIZE);
+  flash_program_half_word_buffer((uint16_t*)SAVE_BANDS_ADDR, (uint16_t*)&s, sizeof s);
+  return 0;
+}
+
+int bands_recall(void) {
+  const band_store_t *src = (const band_store_t*)SAVE_BANDS_ADDR;
+  if (src->magic != BANDS_MAGIC ||
+      checksum(src, sizeof *src - sizeof src->checksum) != src->checksum)
+    return -1;
+  memcpy(bands, src->band, sizeof(bands));
+  return 0;
 }
 

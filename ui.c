@@ -809,6 +809,22 @@ static UI_FUNCTION_ADV_CALLBACK(menu_recall_acb) {
   load_properties(data);
 }
 
+// NanoAnalyzer: apply a band preset (center frequency + bandwidth) and return to the sweep
+static UI_FUNCTION_ADV_CALLBACK(menu_band_acb) {
+  if (data >= BANDS_MAX) return;
+  const band_preset_t *bp = &bands[data];
+  if (b) {
+    b->p1.text = bp->name;
+    if (bp->name[0] && FREQ_IS_CENTERSPAN() &&
+        get_sweep_frequency(ST_CENTER) == bp->center &&
+        get_sweep_frequency(ST_SPAN)   == bp->span)
+      b->icon = BUTTON_ICON_CHECK;
+    return;
+  }
+  band_apply(data);
+  ui_mode_normal();
+}
+
 enum {
  MENU_CONFIG_TOUCH_CAL = 0,
  MENU_CONFIG_TOUCH_TEST,
@@ -2235,6 +2251,43 @@ const menuitem_t menu_sweep_points[] = {
   { MT_NEXT, 0, NULL, menu_back } // next-> menu_back
 };
 
+// NanoAnalyzer: band presets, grouped
+static const menuitem_t menu_bands_hf[] = {
+  { MT_ADV_CALLBACK, 0, "%s", menu_band_acb },
+  { MT_ADV_CALLBACK, 1, "%s", menu_band_acb },
+  { MT_ADV_CALLBACK, 2, "%s", menu_band_acb },
+  { MT_ADV_CALLBACK, 3, "%s", menu_band_acb },
+  { MT_ADV_CALLBACK, 4, "%s", menu_band_acb },
+  { MT_ADV_CALLBACK, 5, "%s", menu_band_acb },
+  { MT_ADV_CALLBACK, 6, "%s", menu_band_acb },
+  { MT_ADV_CALLBACK, 7, "%s", menu_band_acb },
+  { MT_ADV_CALLBACK, 8, "%s", menu_band_acb },
+  { MT_ADV_CALLBACK, 9, "%s", menu_band_acb },
+  { MT_NEXT, 0, NULL, menu_back } // next-> menu_back
+};
+
+static const menuitem_t menu_bands_vu[] = {
+  { MT_ADV_CALLBACK, 10, "%s", menu_band_acb },
+  { MT_ADV_CALLBACK, 11, "%s", menu_band_acb },
+  { MT_ADV_CALLBACK, 12, "%s", menu_band_acb },
+  { MT_ADV_CALLBACK, 13, "%s", menu_band_acb },
+  { MT_NEXT, 0, NULL, menu_back } // next-> menu_back
+};
+
+static const menuitem_t menu_bands_svc[] = {
+  { MT_ADV_CALLBACK, 14, "%s", menu_band_acb },
+  { MT_ADV_CALLBACK, 15, "%s", menu_band_acb },
+  { MT_ADV_CALLBACK, 16, "%s", menu_band_acb },
+  { MT_NEXT, 0, NULL, menu_back } // next-> menu_back
+};
+
+const menuitem_t menu_bands[] = {
+  { MT_SUBMENU, 0, "HF\n 160-10m",   menu_bands_hf },
+  { MT_SUBMENU, 0, "VHF / UHF",      menu_bands_vu },
+  { MT_SUBMENU, 0, "GMRS / MURS\n / CB", menu_bands_svc },
+  { MT_NEXT, 0, NULL, menu_back } // next-> menu_back
+};
+
 // NanoAnalyzer: sweep is defined by center frequency + bandwidth (== span)
 const menuitem_t menu_stimulus[] = {
   { MT_ADV_CALLBACK, KM_CENTER, "CENTER FREQ",   menu_keyboard_acb },
@@ -2530,9 +2583,10 @@ const menuitem_t menu_config[] = {
 };
 
 const menuitem_t menu_top[] = {
+  { MT_SUBMENU, 0, "BANDS",     menu_bands },
   { MT_SUBMENU, 0, "DISPLAY",   menu_display },
   { MT_SUBMENU, 0, "MARKER",    menu_marker },
-  { MT_SUBMENU, 0, "STIMULUS",  menu_stimulus },
+  { MT_SUBMENU, 0, "CUSTOM\n FREQ / BW", menu_stimulus },
   { MT_SUBMENU, 0, "CALIBRATE", menu_cal },
   { MT_SUBMENU, 0, "RECALL",    menu_recall },
 #ifdef __VNA_MEASURE_MODULE__

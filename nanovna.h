@@ -1406,6 +1406,26 @@ int config_recall(void);
 void clear_all_config_prop_data(void);
 
 /*
+ * bands.c - NanoAnalyzer band presets (center frequency + bandwidth)
+ */
+#define BAND_NAME_LEN 10
+#define BANDS_MAX     24
+typedef struct {
+  char   name[BAND_NAME_LEN];
+  freq_t center;
+  freq_t span;              // == bandwidth
+} band_preset_t;
+
+extern band_preset_t bands[BANDS_MAX];
+
+void bands_init(void);            // load from flash, else defaults (call once at boot)
+void bands_reset_defaults(void);  // restore built-in table and save
+int  bands_save(void);            // persist current table to flash
+void band_apply(int idx);         // set sweep center + bandwidth from bands[idx]
+
+int  bands_recall(void);          // data_storage.c: load table from flash (-1 on fail)
+
+/*
  * ui.c
  */
 // Enter in leveler search mode after search click
