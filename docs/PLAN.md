@@ -220,10 +220,14 @@ New `#define __REFLECTION_ONLY__`:
 2. **[DONE]** Center/bandwidth: STIMULUS = CENTER FREQ + BANDWIDTH + JOG STEP +
    SWEEP POINTS; keypad labels updated; `load_default_properties` defaults to
    20 m (14.000-14.350) in `TD_CENTER_SPAN` mode. CUSTOM = this STIMULUS menu.
-3. Band presets: `bands.c`, flash page, BANDS menu tree, apply-preset path.
-   Build; confirm each band loads and sweeps with interpolated cal.
+3. **[DONE]** Band presets: `bands.c` with 17 defaults (HF 160-10m, VHF/UHF 6m-70cm,
+   GMRS/FRS, MURS, CB). `SAVE_BANDS_ADDR` = one flash page below the properties
+   area; `bands_save/recall` in data_storage.c; `bands_init()` at boot.
+   `menu_top` -> BANDS -> {HF, VHF/UHF, GMRS/MURS/CB} -> tap applies center+BW and
+   returns to the sweep (check mark on the active preset). STIMULUS renamed
+   "CUSTOM FREQ / BW". BANDS_MAX 24 (7 spare slots for Phase 4 custom presets).
 4. EDIT PRESETS: edit center/BW/name, save/reset to flash. Confirm CB freeband
-   widening persists across power cycle.
+   widening persists across power cycle. `bands_reset_defaults()` already exists.
 5. Display layouts + auto-marker-to-min. Confirm all 3 modes.
 6. Cal UX simplification + CAL SPAN shortcut. Full wideband SOL, then walk every
    band preset.
