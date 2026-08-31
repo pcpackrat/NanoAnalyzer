@@ -919,12 +919,12 @@ static const marker_t def_markers[MARKERS_MAX] = {
 static void load_default_properties(void) {
 //Magic add on caldata_save
   current_props.magic             = PROPERTIES_MAGIC;
-  current_props._frequency0       =     50000;    // start =  50kHz
-  current_props._frequency1       = 900000000;    // end   = 900MHz
+  current_props._frequency0       =  14000000;    // 20 m: center 14.175 MHz, bandwidth 350 kHz
+  current_props._frequency1       =  14350000;
   current_props._var_freq         = 0;
   current_props._sweep_points     = POINTS_COUNT_DEFAULT; // Set default points count
-  current_props._cal_frequency0   =     50000;    // calibration start =  50kHz
-  current_props._cal_frequency1   = 900000000;    // calibration end   = 900MHz
+  current_props._cal_frequency0   =  14000000;    // calibration snapshot = same range
+  current_props._cal_frequency1   =  14350000;
   current_props._cal_sweep_points = POINTS_COUNT_DEFAULT; // Set calibration default points count
   current_props._cal_status       = 0;
 //=============================================
@@ -941,7 +941,7 @@ static void load_default_properties(void) {
   current_props._current_trace   = 0;
   current_props._active_marker   = 0;
   current_props._previous_marker = MARKER_INVALID;
-  current_props._mode            = 0;
+  current_props._mode            = TD_CENTER_SPAN;  // center/bandwidth entry model
   current_props._reserved        = 0;
   current_props._power           = SI5351_CLK_DRIVE_STRENGTH_AUTO;
   current_props._cal_power       = SI5351_CLK_DRIVE_STRENGTH_AUTO;

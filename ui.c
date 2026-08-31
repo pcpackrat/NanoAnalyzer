@@ -185,7 +185,9 @@ static char    kp_buf[TXTINPUT_LEN+1];  // !!!!!! WARNING size must be + 2 from 
 static uint8_t ui_mode = UI_NORMAL;
 static const keypads_t *keypads;
 static uint8_t keypad_mode;
+#ifdef __USE_SD_CARD__
 static uint8_t keyboard_temp;           // Use for custom keyboard processing
+#endif
 static uint8_t menu_current_level = 0;
 static int8_t  selection = -1;
 
@@ -952,18 +954,6 @@ static UI_FUNCTION_ADV_CALLBACK(menu_format_acb) {
     set_trace_type(current_trace, format, channel);
 }
 
-static UI_FUNCTION_ADV_CALLBACK(menu_channel_acb) {
-  (void)data;
-  if (current_trace == TRACE_INVALID) {if (b) b->p1.text = ""; return;}
-  int ch = trace[current_trace].channel;
-  if (b) {
-    b->p1.text = ch == 0 ? "S11 (REFL)" : "S21 (THRU)";
-    return;
-  }
-  // Change channel only if trace type available for this
-  if ((1<<(trace[current_trace].type)) & S11_AND_S21_TYPE_MASK)
-    set_trace_channel(current_trace, ch^1);
-}
 
 static UI_FUNCTION_ADV_CALLBACK(menu_transform_window_acb) {
   const char *text = "";
@@ -2145,16 +2135,12 @@ const menuitem_t menu_format2[] = {
   { MT_NEXT, 0, NULL, menu_back } // next-> menu_back
 };
 
+// NanoAnalyzer: antenna-match readouts only
 const menuitem_t menu_formatS11[] = {
-  { MT_ADV_CALLBACK, F_S11|TRC_LOGMAG, "LOGMAG",       menu_format_acb },
-  { MT_ADV_CALLBACK, F_S11|TRC_PHASE,  "PHASE",        menu_format_acb },
-  { MT_ADV_CALLBACK, F_S11|TRC_DELAY,  "DELAY",        menu_format_acb },
-  { MT_ADV_CALLBACK, F_S11|TRC_SMITH,  "SMITH",        menu_format_acb },
   { MT_ADV_CALLBACK, F_S11|TRC_SWR,    "SWR",          menu_format_acb },
   { MT_ADV_CALLBACK, F_S11|TRC_R,      "RESISTANCE",   menu_format_acb },
   { MT_ADV_CALLBACK, F_S11|TRC_X,      "REACTANCE",    menu_format_acb },
   { MT_ADV_CALLBACK, F_S11|TRC_Z,      "|Z|",          menu_format_acb },
-  { MT_SUBMENU,          0, S_RARROW " MORE",     menu_format2 },
   { MT_NEXT, 0, NULL, menu_back } // next-> menu_back
 };
 
@@ -2165,8 +2151,6 @@ const menuitem_t menu_scale[] = {
   { MT_ADV_CALLBACK, KM_BOTTOM,    "BOTTOM",              menu_scale_keyboard_acb },
   { MT_ADV_CALLBACK, KM_SCALE,     "SCALE",               menu_scale_keyboard_acb },
   { MT_ADV_CALLBACK, KM_REFPOS,    "REF POSITION",        menu_scale_keyboard_acb },
-  { MT_ADV_CALLBACK, KM_EDELAY,    "E-DELAY",             menu_keyboard_acb },
-  { MT_ADV_CALLBACK, KM_S21OFFSET, "S21 OFFSET\n " R_LINK_COLOR "%b.3F" S_dB,  menu_keyboard_acb },
 #ifdef __USE_GRID_VALUES__
   { MT_ADV_CALLBACK, VNA_MODE_SHOW_GRID, "SHOW GRID\nVALUES", menu_vna_mode_acb },
   { MT_ADV_CALLBACK, VNA_MODE_DOT_GRID , "DOT GRID",          menu_vna_mode_acb },
@@ -2227,18 +2211,9 @@ const menuitem_t menu_smooth_count[] = {
 
 const menuitem_t menu_display[] = {
   { MT_ADV_CALLBACK, 0, "TRACE",                               menu_traces_acb },
-  { MT_SUBMENU,      0, "FORMAT\n S11 (REFL)",                 menu_formatS11 },
-  { MT_SUBMENU,      0, "FORMAT\n S21 (THRU)",                 menu_formatS21 },
-  { MT_ADV_CALLBACK, 0, "CHANNEL\n " R_LINK_COLOR "%s",        menu_channel_acb },
+  { MT_SUBMENU,      0, "FORMAT",                               menu_formatS11 },
   { MT_SUBMENU,      0, "SCALE",                               menu_scale },
-  { MT_SUBMENU,      0, "TRANSFORM",                           menu_transform },
   { MT_ADV_CALLBACK, 0, "IF BANDWIDTH\n " R_LINK_COLOR "%u" S_Hz, menu_bandwidth_sel_acb },
-#ifdef __USE_SMOOTH__
-  { MT_SUBMENU,      0, "DATA SMOOTH",                         menu_smooth_count },
-#endif
-#ifdef __VNA_Z_RENORMALIZATION__
-  { MT_ADV_CALLBACK, KM_Z_PORT, "PORT-Z\n " R_LINK_COLOR "50 " S_RARROW " %bF" S_OHM, menu_keyboard_acb},
-#endif
   { MT_NEXT, 0, NULL, menu_back } // next-> menu_back
 };
 
@@ -2260,13 +2235,10 @@ const menuitem_t menu_sweep_points[] = {
   { MT_NEXT, 0, NULL, menu_back } // next-> menu_back
 };
 
+// NanoAnalyzer: sweep is defined by center frequency + bandwidth (== span)
 const menuitem_t menu_stimulus[] = {
-  { MT_ADV_CALLBACK, KM_START,  "START",         menu_keyboard_acb },
-  { MT_ADV_CALLBACK, KM_STOP,   "STOP",          menu_keyboard_acb },
-  { MT_ADV_CALLBACK, KM_CENTER, "CENTER",        menu_keyboard_acb },
-  { MT_ADV_CALLBACK, KM_SPAN,   "SPAN",          menu_keyboard_acb },
-  { MT_ADV_CALLBACK, KM_CW,     "CW FREQ",       menu_keyboard_acb },
-  { MT_ADV_CALLBACK, KM_STEP,   "FREQ STEP\n " R_LINK_COLOR "%bF" S_Hz, menu_keyboard_acb },
+  { MT_ADV_CALLBACK, KM_CENTER, "CENTER FREQ",   menu_keyboard_acb },
+  { MT_ADV_CALLBACK, KM_SPAN,   "BANDWIDTH",     menu_keyboard_acb },
   { MT_ADV_CALLBACK, KM_VAR,    "JOG STEP\n " R_LINK_COLOR "AUTO",      menu_keyboard_acb },
   { MT_ADV_CALLBACK,      0,    "SWEEP POINTS\n " R_LINK_COLOR "%u",    menu_points_sel_acb },
   { MT_NEXT, 0, NULL, menu_back } // next-> menu_back
@@ -2301,11 +2273,8 @@ const menuitem_t menu_marker_sel[] = {
 };
 
 const menuitem_t menu_marker_ops[] = {
-  { MT_CALLBACK, ST_START,         S_RARROW" START",   menu_marker_op_cb },
-  { MT_CALLBACK, ST_STOP,          S_RARROW" STOP",    menu_marker_op_cb },
   { MT_CALLBACK, ST_CENTER,        S_RARROW" CENTER",  menu_marker_op_cb },
-  { MT_CALLBACK, ST_SPAN,          S_RARROW" SPAN",    menu_marker_op_cb },
-  { MT_CALLBACK, UI_MARKER_EDELAY, S_RARROW" E-DELAY", menu_marker_op_cb },
+  { MT_CALLBACK, ST_SPAN,          S_RARROW" BANDWIDTH", menu_marker_op_cb },
   { MT_NEXT, 0, NULL, menu_back } // next-> menu_back
 };
 
@@ -3192,8 +3161,8 @@ const keypads_list keypads_mode_tbl[KM_NONE] = {
 //                      key format     data for cb    text at bottom        callback function
 [KM_START]           = {KEYPAD_FREQ,   ST_START,      "START",              input_freq     }, // start
 [KM_STOP]            = {KEYPAD_FREQ,   ST_STOP,       "STOP",               input_freq     }, // stop
-[KM_CENTER]          = {KEYPAD_FREQ,   ST_CENTER,     "CENTER",             input_freq     }, // center
-[KM_SPAN]            = {KEYPAD_FREQ,   ST_SPAN,       "SPAN",               input_freq     }, // span
+[KM_CENTER]          = {KEYPAD_FREQ,   ST_CENTER,     "CENTER FREQ",        input_freq     }, // center
+[KM_SPAN]            = {KEYPAD_FREQ,   ST_SPAN,       "BANDWIDTH",          input_freq     }, // span == bandwidth
 [KM_CW]              = {KEYPAD_FREQ,   ST_CW,         "CW FREQ",            input_freq     }, // cw freq
 [KM_STEP]            = {KEYPAD_FREQ,   ST_STEP,       "FREQ STEP",          input_freq     }, // freq as point step
 [KM_VAR]             = {KEYPAD_FREQ,   ST_VAR,        "JOG STEP",           input_freq     }, // VAR freq step
