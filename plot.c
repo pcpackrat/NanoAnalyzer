@@ -932,7 +932,7 @@ void request_to_draw_marker(uint16_t mk_idx) {
 static int marker_area_max(void) {
   int t_count = 0, m_count = 0, i;
   for (i = 0; i < TRACES_MAX; i++) if (trace[i].enabled) t_count++;
-  for (i = 0; i < MARKERS_MAX; i++) if (markers[i].enabled) m_count++;
+  for (i = 0; i < MARKERS_MAX; i++) if (markers[i].enabled && i != TRACK_MARKER) m_count++;
   int cnt = t_count > m_count ? t_count : m_count;
   int extra = 0;
   if (get_electrical_delay() != 0.0f) extra+= 2;
@@ -984,22 +984,23 @@ void marker_search(void) {
   set_marker_index(active_marker, found);
 }
 
-// NanoAnalyzer: track the marker to the true min/max of the trace value (not the
-// on-screen pixel, so it is immune to graph scaling / clamping in the data layouts)
+// NanoAnalyzer: keep the dedicated TRACK_MARKER on the lowest trace value (the SWR
+// dip). Searches the actual value via the trace callback, so it is immune to graph
+// scaling. Leaves the user markers (1..4) alone.
 static void marker_track(void) {
-  if (current_trace == TRACE_INVALID || active_marker == MARKER_INVALID) return;
+  if (current_trace == TRACE_INVALID) return;
   get_value_cb_t cb = trace_info_list[trace[current_trace].type].get_value_cb;
   if (!cb) return;
   float (*arr)[2] = measured[trace[current_trace].channel];
-  const bool findmin = VNA_MODE(VNA_MODE_SEARCH) != 0;
   int found = 0;
   float best = cb(0, arr[0]);
   for (int i = 1; i < sweep_points; i++) {
     float v = cb(i, arr[i]);
     if (vna_isinff(v)) continue;
-    if (vna_isinff(best) || (findmin ? v < best : v > best)) { best = v; found = i; }
+    if (vna_isinff(best) || v < best) { best = v; found = i; }
   }
-  set_marker_index(active_marker, found);
+  markers[TRACK_MARKER].enabled = TRUE;
+  set_marker_index(TRACK_MARKER, found);
 }
 
 void marker_search_dir(int16_t from, int16_t dir) {
@@ -1221,8 +1222,7 @@ static void plot_into_index(void) {
       trace_into_index(t);
 //  STOP_PROFILE;
   // Marker track on data update
-  if (props_mode & TD_MARKER_TRACK)
-    marker_track();
+  marker_track();
   // NanoAnalyzer: keep the readout strip below the graph refreshed
   if (display_mode != DISPLAY_GRAPH)
     invalidate_rect(0, plot_h(), LCD_WIDTH - 1, LCD_HEIGHT - 1);
@@ -1295,14 +1295,13 @@ static void cell_draw_marker_info(int x0, int y0) {
   int t, mk, xpos, ypos;
   if (active_marker == MARKER_INVALID || current_trace == TRACE_INVALID) // No markers or no traces
     return;
-  if (display_mode != DISPLAY_GRAPH) return;   // NanoAnalyzer: readout strip replaces this
   int active_marker_idx = markers[active_marker].index;
   int j = 0;
   // Marker (for current selected trace) display mode (selected more then 1 marker)
   if (previous_marker != MARKER_INVALID) {
     t = current_trace;
     for (mk = 0; mk < MARKERS_MAX; mk++) {
-      if (!markers[mk].enabled)
+      if (!markers[mk].enabled || mk == TRACK_MARKER)   // skip the dedicated SWR-min marker
         continue;
       xpos = marker_pos[j].x - x0;
       ypos = marker_pos[j].y - y0;
@@ -1497,16 +1496,15 @@ static void cell_draw_readout(int x0, int y0) {
   cell_printf(x_stop  - x0, yb - y0, "%s", fe_);
 
   const int y1 = yb + FONT_STR_HEIGHT + 10;          // gap under the range line
-  if (active_marker == MARKER_INVALID) { cell_str_scale(xb - x0, y1 - y0, 2, "no marker"); return; }
-  int idx = markers[active_marker].index;
+  int idx = markers[TRACK_MARKER].index;
   if (idx < 0) idx = 0; else if (idx >= sweep_points) idx = sweep_points - 1;
   const float *v = measured[0][idx];
   float s = swr(idx, v);
   int r = (int)resistance(idx, v), x = (int)reactance(idx, v), z = (int)mod_z(idx, v);
   char sbuf[10], line[40];
   if (vna_isinff(s)) strcpy(sbuf, "10+"); else plot_printf(sbuf, sizeof sbuf, "%.2f", s);
-  freq_t mf = get_marker_frequency(active_marker) + 500;
-  const char *tag = (props_mode & TD_MARKER_TRACK) ? "SWR MIN" : "MARKER";
+  freq_t mf = getFrequency(idx) + 500;
+  const char *tag = "SWR MIN";
 
   if (display_mode == DISPLAY_GRAPH_DATA) {
     plot_printf(line, sizeof line, "%s %u.%03uM  SWR %s", tag, (unsigned)(mf/1000000), (unsigned)((mf/1000)%1000), sbuf);
@@ -1667,9 +1665,11 @@ static void draw_cell(int x0, int y0) {
         // Draw marker plate
         lcd_set_foreground(LCD_TRACE_1_COLOR + t);
         cell_blit_bitmap(x, y, MARKER_WIDTH, MARKER_HEIGHT, plate);
-        // Draw marker number
-        lcd_set_foreground(LCD_TXT_SHADOW_COLOR);
-        cell_blit_bitmap(x, y, MARKER_WIDTH, MARKER_HEIGHT, marker);
+        // Draw marker number (the SWR-min marker is drawn as a plain plate)
+        if (i != TRACK_MARKER) {
+          lcd_set_foreground(LCD_TXT_SHADOW_COLOR);
+          cell_blit_bitmap(x, y, MARKER_WIDTH, MARKER_HEIGHT, marker);
+        }
       }
     }
   }

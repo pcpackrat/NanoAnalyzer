@@ -1299,14 +1299,6 @@ static UI_FUNCTION_CALLBACK(menu_marker_search_dir_cb) {
 #endif
 }
 
-static UI_FUNCTION_ADV_CALLBACK(menu_marker_tracking_acb) {
-  (void)data;
-  if (b) {
-    b->icon = (props_mode & TD_MARKER_TRACK) ? BUTTON_ICON_CHECK : BUTTON_ICON_NOCHECK;
-    return;
-  }
-  props_mode^= TD_MARKER_TRACK;
-}
 
 #ifdef __VNA_MEASURE_MODULE__
 extern const menuitem_t *menu_measure_list[];
@@ -1327,15 +1319,15 @@ static UI_FUNCTION_CALLBACK(menu_measure_cb) {
 
 static void active_marker_check(void) {
   int i;
-  // Auto select active marker if disabled
+  // Auto select active marker if disabled (TRACK_MARKER is not a user marker)
   if (active_marker == MARKER_INVALID)
     for (i = 0; i < MARKERS_MAX; i++)
-      if (markers[i].enabled) active_marker = i;
+      if (markers[i].enabled && i != TRACK_MARKER) { active_marker = i; break; }
   // Auto select previous marker if disabled
   if (previous_marker == active_marker) previous_marker = MARKER_INVALID;
   if (previous_marker == MARKER_INVALID) {
     for (i = 0; i < MARKERS_MAX; i++)
-      if (markers[i].enabled && i != active_marker) previous_marker = i;
+      if (markers[i].enabled && i != active_marker && i != TRACK_MARKER) previous_marker = i;
   }
 }
 
@@ -2354,29 +2346,12 @@ const menuitem_t menu_stimulus[] = {
   { MT_NEXT, 0, NULL, menu_back } // next-> menu_back
 };
 
+// NanoAnalyzer: markers 1..4 are the user markers (the SWR-min marker is separate)
 const menuitem_t menu_marker_sel[] = {
   { MT_ADV_CALLBACK, 0, "MARKER %d", menu_marker_sel_acb },
-#if MARKERS_MAX >=2
   { MT_ADV_CALLBACK, 1, "MARKER %d", menu_marker_sel_acb },
-#endif
-#if MARKERS_MAX >=3
   { MT_ADV_CALLBACK, 2, "MARKER %d", menu_marker_sel_acb },
-#endif
-#if MARKERS_MAX >=4
   { MT_ADV_CALLBACK, 3, "MARKER %d", menu_marker_sel_acb },
-#endif
-#if MARKERS_MAX >=5
-  { MT_ADV_CALLBACK, 4, "MARKER %d", menu_marker_sel_acb },
-#endif
-#if MARKERS_MAX >=6
-  { MT_ADV_CALLBACK, 5, "MARKER %d", menu_marker_sel_acb },
-#endif
-#if MARKERS_MAX >=7
-  { MT_ADV_CALLBACK, 6, "MARKER %d", menu_marker_sel_acb },
-#endif
-#if MARKERS_MAX >=8
-  { MT_ADV_CALLBACK, 7, "MARKER %d", menu_marker_sel_acb },
-#endif
   { MT_CALLBACK, 0,     "ALL OFF", menu_marker_disable_all_cb },
   { MT_ADV_CALLBACK, 0,   "DELTA", menu_marker_delta_acb },
   { MT_NEXT, 0, NULL, menu_back } // next-> menu_back
@@ -2504,7 +2479,6 @@ const menuitem_t menu_marker[] = {
   { MT_CALLBACK, MK_SEARCH_LEFT,    "SEARCH\n " S_LARROW "LEFT",   menu_marker_search_dir_cb },
   { MT_CALLBACK, MK_SEARCH_RIGHT,   "SEARCH\n " S_RARROW "RIGHT",  menu_marker_search_dir_cb },
   { MT_SUBMENU,                0,   "OPERATIONS",                  menu_marker_ops    },
-  { MT_ADV_CALLBACK,           0,   "TRACKING",                    menu_marker_tracking_acb },
   { MT_NEXT, 0, NULL, menu_back } // next-> menu_back
 };
 
@@ -3694,7 +3668,7 @@ static bool touch_pickup_marker(int touch_x, int touch_y) {
     if (!trace[t].enabled)
       continue;
     for (m = 0; m < MARKERS_MAX; m++) {
-      if (!markers[m].enabled)
+      if (!markers[m].enabled || m == TRACK_MARKER)   // SWR-min marker is not draggable
         continue;
       // Get distance to marker from touch point
       int dist = distance_to_index(t, markers[m].index, touch_x, touch_y);

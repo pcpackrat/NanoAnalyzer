@@ -993,6 +993,10 @@ typedef struct trace {
 
 // marker 1 to 8
 #define MARKERS_MAX 8
+// NanoAnalyzer: last marker slot is the dedicated auto SWR-minimum marker,
+// not user-selectable; markers 1..4 (index 0..3) are free for the user.
+#define TRACK_MARKER    (MARKERS_MAX - 1)
+#define USER_MARKERS    4
 typedef struct marker {
   uint8_t  enabled;
   uint8_t  reserved;
