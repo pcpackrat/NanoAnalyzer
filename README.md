@@ -1,159 +1,51 @@
-NanoVNA - Very tiny handheld Vector Network Analyzer
-==========================================================
-[release]: https://github.com/DiSlord/NanoVNA-D/releases
+# NanoAnalyzer
 
-<div align="center">
-<img src="/doc/nanovna.jpg" width="480px">
-</div>
+Simplified **antenna analyzer** firmware for the **NanoVNA-H4**.
 
-# About
+A stripped-down fork of [DiSlord's NanoVNA-D](https://github.com/DiSlord/NanoVNA-D)
+that does one job: tell you how well an antenna is matched on a given band —
+**SWR, resistance, reactance and |Z|** from an S11 (reflection) sweep. Everything
+else in the stock firmware (S21/through, time domain, LC match, SD card, expert
+menus) is removed.
 
-**NanoVNA-H** and **NanoVNA-H4** are very tiny handheld Vector Network Analyzers (VNA).
-They are standalone portable devices withLCD and battery.
-This project aims to provide improved firmware for this useful instrument for enthusiast.
+## Features
 
-This repository contains the source code of the improved NanoVNA-H and NanoVNA-H4 firmware.
+- **Reflection-only S11** — faster sweeps, one-port SOL calibration.
+- **Center frequency + bandwidth** entry model (not start/stop).
+- **Band presets** — every US amateur band (160 m – 23 cm), GMRS/FRS, MURS, CB,
+  plus a CUSTOM group with wide-scan presets and editable user slots. Each preset
+  stores a center frequency and bandwidth; tap to sweep it.
+- **One wideband SOL calibration** — calibrate once over a wide span; every band
+  interpolates from it.
+- **Dedicated SWR-minimum marker** ("S") that auto-tracks the dip, plus four free
+  user markers with the usual readout.
+- **Three display layouts** — graph, graph + data, big-numbers + mini graph.
+- Powers up on the last band used.
 
-The documentation describes the build and flash process on a MacOS or a Linux (Debian or Ubuntu) system, other Linux (or even BSD) systems may behave similar.
+## Build
 
-## Prepare ARM Cross Tools
+Requires an ARM bare-metal toolchain (`gcc-arm-none-eabi`, `make`).
 
-**UPDATE**: Recent gcc version works to build NanoVNA, no need to use old version.
-
-### MacOSX
-
-Install cross tools and firmware updating tool.
-
-    brew tap px4/px4
-    brew install gcc-arm-none-eabi-80
-    brew install dfu-util
-
-### Linux (ubuntu)
-
-Download arm cross tools from [here](https://developer.arm.com/tools-and-software/open-source-software/developer-tools/gnu-toolchain/gnu-rm/downloads).
-
-    wget https://developer.arm.com/-/media/Files/downloads/gnu-rm/8-2018q4/gcc-arm-none-eabi-8-2018-q4-major-linux.tar.bz2
-    sudo tar xfj gcc-arm-none-eabi-8-2018-q4-major-linux.tar.bz2 -C /usr/local
-    PATH=/usr/local/gcc-arm-none-eabi-8-2018-q4-major/bin:$PATH
-    sudo apt install -y dfu-util
-
-### Debian
-
-    sudo apt install gcc-arm-none-eabi
-    sudo apt install -y dfu-util
-
-## Fetch Source Code
-
-Fetch the firmware source and the submodule, do this once to initialize your local clone from GitHub:
-
-    git clone https://github.com/DiSlord/NanoVNA-D.git
-    cd NanoVNA-D
-    git submodule update --init --recursive
-
-## Update Source Code
-
-To get updates from the GitHub repository, go to your `NanoVNA-D` directory and type:
-
-    git pull
-
-## Build the NanoVNA-H Firmware
-
-Go to your `NanoVNA-D` directory and type:
-
-    export TARGET=F072
-    make clean
-    make
-
-## Build the NanoVNA-H4 Firmware
-
-Go to your `NanoVNA-D` directory and type:
-
-    export TARGET=F303
-    make clean
-    make
-
-## Flash Firmware
-
-When the build of your firmware is finished, you can flash it onto your NanoVNA device.
-First, let the device enter DFU mode by one of following methods.
-
-* Open the device and jumper `BOOT0` pin to `Vdd` pin when powering the device.
-* Select menu Config->DFU (needs recent firmware).
-* Press the jog switch on your -H4 when powering the device.
-
-Then, flash the firmware using `dfu-util` via USB.
-
-#### For NanoVNA-H:
-
-Go to your `NanoVNA-D` directory and type:
-
-    dfu-util -d 0483:df11 -a 0 -s 0x08000000:leave -D build/H.bin
-
-#### For NanoVNA-H4:
-
-Go to your `NanoVNA-D` directory and type:
-
-    dfu-util -d 0483:df11 -a 0 -s 0x08000000:leave -D build/H4.bin
-
-#### Or simply type directly after building the firmware (for both variants).
-
-Go to your `NanoVNA-D` directory and type:
-
-    make flash
-
-#### Ignore the apparent error message during flashing
-
-The low-level tool `dfu-util` displays a lot of information that is very useful especially for developers, but can confuse the user.
-In particular, please ignore the message about corrupt firmware, this is the normal behaviour of the unit before clearing the status.
-It is important to note that after clearing the status, there is no longer an error condition present.
-
-```
-...
-Determining device status...
-DFU state(10) = dfuERROR, status(10) = Device's firmware is corrupt. It cannot return to run-time (non-DFU) operations
-Clearing status
-Determining device status...
-DFU state(2) = dfuIDLE, status(0) = No error condition is present
-...
+```sh
+export TARGET=F303
+make
 ```
 
-## Companion Tools
+Output: `build/H4.bin`. Released binaries are committed under `bin/`.
 
-There are several numbers of great companion PC tools from third-party.
+## Flash
 
-* [NanoVNA-App software](https://github.com/OneOfEleven/NanoVNA-H/blob/master/Release/NanoVNA-App.rar) by OneOfEleven
-* [NanoVNASharp Windows software](https://drive.google.com/drive/folders/1IZEtx2YdqchaTO8Aa9QbhQ8g_Pr5iNhr) by hugen79
-* [NanoVNA WebSerial/WebUSB](https://github.com/cho45/NanoVNA-WebUSB-Client) by cho45
-* [Android NanoVNA app](https://play.google.com/store/apps/details?id=net.lowreal.nanovnawebapp) by cho45
-* [NanoVNASaver](https://github.com/NanoVNA-Saver/nanovna-saver) by mihtjel and the members of NanoVNA-Saver
-* [TAPR VNAR4](https://groups.io/g/nanovna-users/files/NanoVNA%20PC%20Software/TAPR%20VNA) supports NanoVNA by erikkaashoek
-* [The NanoVNA toolbox](https://github.com/Ho-Ro/nanovna-tools) by Ho-Ro
-* see [python](/python/README.md) directory to use NanoVNA with Python and Jupyter Notebook.
+Put the H4 in DFU (hold the jog switch while powering on), then:
 
-## Documentation
+```sh
+dfu-util -d 0483:df11 -a 0 -s 0x08000000:leave -D bin/H4.bin
+```
 
-* [NanoVNA User Guide(ja)](https://cho45.github.io/NanoVNA-manual/) by cho45. [(en:google translate)](https://translate.google.com/translate?sl=ja&tl=en&u=https%3A%2F%2Fcho45.github.io%2FNanoVNA-manual%2F)
-* [NanoVNA user group](https://groups.io/g/nanovna-users/topics) on groups.io.
-
-## Reference
-
-* [Schematics](/doc/nanovna-sch.pdf)
-* [PCB Photo](/doc/nanovna-pcb-photo.jpg)
-* [Block Diagram](/doc/nanovna-blockdiagram.png)
-* Kit available from https://ttrf.tk/kit/nanovna
-
-## Note
-
-Hardware design material is disclosed to prevent bad quality clone. Please let me know if you would have your own unit.
+or use STM32CubeProgrammer.
 
 ## Credit
-* [@DiSlord](https://github.com/DiSlord/)
 
-## Based on code from:
-* [@edy555](https://github.com/edy555)
-
-### Contributors
-* [@OneOfEleven](https://github.com/OneOfEleven)
-* [@hugen79](https://github.com/hugen79)
-* [@cho45](https://github.com/cho45)
-
+Based on [NanoVNA-D](https://github.com/DiSlord/NanoVNA-D) by
+[@DiSlord](https://github.com/DiSlord/), itself based on the original
+[NanoVNA](https://github.com/ttrftech/NanoVNA) by
+[@edy555](https://github.com/edy555). Licensed under the GPL.
