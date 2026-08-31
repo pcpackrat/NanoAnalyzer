@@ -18,3 +18,8 @@ reference/
 .DS_Store
 TAGS
 .emacs-dirvars
+.gitignore
+
+# Claude Code local config (not part of the firmware)
+CLAUDE.md
+.claude/
