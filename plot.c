@@ -1223,6 +1223,9 @@ static void plot_into_index(void) {
   // Marker track on data update
   if (props_mode & TD_MARKER_TRACK)
     marker_track();
+  // NanoAnalyzer: keep the readout strip below the graph refreshed
+  if (display_mode != DISPLAY_GRAPH)
+    invalidate_rect(0, plot_h(), LCD_WIDTH - 1, LCD_HEIGHT - 1);
 #ifdef __VNA_MEASURE_MODULE__
   // Current scan update
   measure_set_flag(MEASURE_UPD_SWEEP);
@@ -1431,11 +1434,21 @@ static int cell_draw_bignum(int x, int y, const char *s, int sc) {
 static void cell_draw_readout(int x0, int y0) {
   if (display_mode == DISPLAY_GRAPH) return;
   const int xb = OFFSETX + 2;
-  const int yb = plot_h() + 4;
-  if (y0 + CELLHEIGHT <= yb || x0 >= 340) return;  // cell not in the readout region
+  const int yb = plot_h() + 1;                       // right under the graph
+  if (y0 + CELLHEIGHT <= yb) return;                 // cell entirely in the graph area
   lcd_set_foreground(LCD_FG_COLOR);
 
-  if (active_marker == MARKER_INVALID) { cell_printf(xb - x0, yb - y0, "no marker"); return; }
+  // sweep range line, meeting the bottom of the graph
+  freq_t fa = get_sweep_frequency(ST_START) + 500;
+  freq_t fc = get_sweep_frequency(ST_CENTER) + 500;
+  freq_t fe = get_sweep_frequency(ST_STOP) + 500;
+  char bw[12];
+  plot_printf(bw, sizeof bw, "%.0F" S_Hz, (float)get_sweep_frequency(ST_SPAN));
+  cell_printf(xb - x0, yb - y0, "%u.%03u   CTR %u.%03u  BW %s   %u.%03u MHz",
+              fa/1000000, (fa/1000)%1000, fc/1000000, (fc/1000)%1000, bw, fe/1000000, (fe/1000)%1000);
+
+  const int y1 = yb + FONT_STR_HEIGHT + 3;
+  if (active_marker == MARKER_INVALID) { cell_printf(xb - x0, y1 - y0, "no marker"); return; }
   int idx = markers[active_marker].index;
   if (idx < 0) idx = 0; else if (idx >= sweep_points) idx = sweep_points - 1;
   const float *v = measured[0][idx];
@@ -1444,12 +1457,11 @@ static void cell_draw_readout(int x0, int y0) {
   char sbuf[10];
   if (vna_isinff(s)) strcpy(sbuf, "10+"); else plot_printf(sbuf, sizeof sbuf, "%.2f", s);
   freq_t mf = get_marker_frequency(active_marker) + 500;
-  unsigned mhz = mf / 1000000, khz = (mf / 1000) % 1000;
   const char *tag = (props_mode & TD_MARKER_TRACK) ? "SWR MIN" : "MARKER";
 
   const int sc = (display_mode == DISPLAY_DATA) ? 3 : 2;
-  cell_printf(xb - x0, yb - y0, "%s  %u.%03u MHz", tag, mhz, khz);
-  int yn = yb + FONT_STR_HEIGHT + 4;
+  cell_printf(xb - x0, y1 - y0, "%s  %u.%03u MHz", tag, (unsigned)(mf/1000000), (unsigned)((mf/1000)%1000));
+  int yn = y1 + FONT_STR_HEIGHT + 3;
   cell_printf(xb - x0, yn + (NUM_FONT_GET_HEIGHT * sc - FONT_STR_HEIGHT) / 2 - y0, "SWR");
   cell_draw_bignum(xb + 4 * FONT_WIDTH - x0, yn - y0, sbuf, sc);
   cell_printf(xb - x0, yn + NUM_FONT_GET_HEIGHT * sc + 4 - y0, "R %d   X %+d   |Z| %d " S_OHM, r, x, z);
@@ -1700,6 +1712,7 @@ void redraw_marker(int8_t marker) {
 }
 
 static void draw_frequencies(void) {
+  if (display_mode != DISPLAY_GRAPH) return;   // data layouts draw the range line in-cell under the graph
   char lm0 = lever_mode == LM_FREQ_0 ? S_SARROW[0] : ' ';
   char lm1 = lever_mode == LM_FREQ_1 ? S_SARROW[0] : ' ';
   // Draw frequency string
