@@ -27,7 +27,7 @@ wideband SOL** done once at the coax end, auto-interpolated to every band.
 
 ## Build & flash workflow
 
-**Git is the transport.** Repo: `https://github.com/pcpackrat/NanoAnalyzer.git`.
+**Git is the transport.** Repo: `https://github.com/pcpackrat/NanoAnalyzer-H4.git`.
 The Debian 13 machine is a **VM** (no NanoVNA attached to it); the H4 is on the
 Windows bench.
 
@@ -46,7 +46,7 @@ Loop:
   Verify by building **stock** `build/H4.bin` before any edits.
 - **Debian VM → GitHub push auth** (user may need help): either an SSH deploy key
   (`ssh-keygen -t ed25519`, add public key to the repo's Deploy Keys with write
-  access, remote = `git@github.com:pcpackrat/NanoAnalyzer.git`) or an HTTPS fine-
+  access, remote = `git@github.com:pcpackrat/NanoAnalyzer-H4.git`) or an HTTPS fine-
   grained PAT in `git credential store`. SSH deploy key recommended.
 - **Windows flashing** (user runs it): NanoVNA-H4 enters DFU by holding the jog
   switch while powering on (shows as "STM32 BOOTLOADER", VID:PID `0483:DF11`).
@@ -63,7 +63,7 @@ Loop:
 
 - `NanoAnalyzer/` currently has **no `.git`** — it is inside the `C:\Users\mikec`
   home-dir repo. In `NanoAnalyzer/`: `git init`, add remote
-  `origin https://github.com/pcpackrat/NanoAnalyzer.git`, first commit, push to
+  `origin https://github.com/pcpackrat/NanoAnalyzer-H4.git`, first commit, push to
   `main`. (If the GitHub repo already has content, `git pull --rebase` /
   reconcile first.)
 - Copy `reference/NanoVNA-D/*` (excluding its `.git/`) to the repo root — this
@@ -204,10 +204,10 @@ New `#define __REFLECTION_ONLY__`:
 
 ## Phasing (build stays green after every phase)
 
-0. **[DONE]** Repo `git init` + remote `pcpackrat/NanoAnalyzer` + source copy +
+0. **[DONE]** Repo `git init` + remote `pcpackrat/NanoAnalyzer-H4` + source copy +
    `.gitignore` + `UPSTREAM.md` + `docs/PLAN.md` + `CLAUDE.md` build section.
    Debian VM (`nanovm` = devuser@10.10.10.53): ARM toolchain already present
-   (gcc 14.2, newlib 4.5, binutils 2.44); repo at `~/src/NanoAnalyzer`; deploy
+   (gcc 14.2, newlib 4.5, binutils 2.44); repo at `~/src/NanoAnalyzer-H4`; deploy
    key `nanoanalyzer_deploy` pushes to GitHub. Stock `H4.bin` built (text 90 KB,
    bss 40 KB) and committed to `bin/` (commit `7d5d831`). **Pending: user flashes
    `bin/H4.bin` to confirm the loop end-to-end.**
