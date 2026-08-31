@@ -1425,9 +1425,14 @@ static void cell_blit_num(int x, int y, uint8_t ch, int sc) {
 
 static void cell_draw_bignum(int x, int y, const char *s, int sc) {
   for (; *s; s++) {
-    uint8_t g = (*s == '.') ? KP_PERIOD : (*s >= '0' && *s <= '9') ? (uint8_t)(*s - '0') : KP_MINUS;
-    cell_blit_num(x, y, g, sc);
-    x += (*s == '.' ? NUM_FONT_GET_WIDTH / 2 + 2 : NUM_FONT_GET_WIDTH + 2) * sc;
+    if (*s == '.') {
+      cell_blit_num(x + 5 * sc, y, KP_PERIOD, sc);       // give the decimal point room to breathe
+      x += (NUM_FONT_GET_WIDTH + 6) * sc;
+    } else {
+      uint8_t g = (*s >= '0' && *s <= '9') ? (uint8_t)(*s - '0') : KP_MINUS;
+      cell_blit_num(x, y, g, sc);
+      x += (NUM_FONT_GET_WIDTH + 2) * sc;
+    }
   }
 }
 
