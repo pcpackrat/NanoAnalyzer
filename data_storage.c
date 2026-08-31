@@ -122,7 +122,7 @@ void clear_all_config_prop_data(void) {
 //
 // NanoAnalyzer band preset table storage
 //
-#define BANDS_MAGIC 0x31444e42  // "BND1"
+#define BANDS_MAGIC 0x32444e42  // "BND2"
 
 typedef struct {
   uint32_t      magic;

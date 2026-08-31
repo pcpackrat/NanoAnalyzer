@@ -14,6 +14,7 @@
 //   HF        : index 0..9
 //   VHF/UHF   : index 10..13
 //   SERVICE   : index 14..16
+//   CUSTOM    : index 17..27 (3 wide-range presets + 8 empty user slots)
 static const band_preset_t default_bands[BANDS_MAX] = {
   // ---- HF amateur ----
   { "160m",       1900000,     200000 },   // 1.800 - 2.000
@@ -35,7 +36,11 @@ static const band_preset_t default_bands[BANDS_MAX] = {
   { "GMRS/FRS", 465137500,    5175000 },   // 462.5500 - 467.7250
   { "MURS",     153210000,    2900000 },   // 151.820 - 154.600
   { "CB",        27185000,     450000 },   // 26.965 - 27.405 (edit wider for freeband)
-  // ---- spare slots for user presets ----
+  // ---- CUSTOM: wide-range scans, then empty user slots ----
+  { "1.7-54M",   27850000,   52300000 },   // HF through 6 m
+  { "118-160M", 139000000,   42000000 },   // air band through 2 m
+  { "420-470M", 445000000,   50000000 },   // 70 cm through GMRS
+  // indices 20..27 left empty for user presets
 };
 
 band_preset_t bands[BANDS_MAX];
@@ -52,7 +57,7 @@ void bands_init(void) {
 
 void band_apply(int idx) {
   if ((unsigned)idx >= BANDS_MAX) return;
-  if (bands[idx].name[0] == 0 || bands[idx].center == 0) return;   // empty slot
+  if (bands[idx].center == 0) return;   // empty slot
   set_sweep_frequency(ST_CENTER, bands[idx].center);
   set_sweep_frequency(ST_SPAN,   bands[idx].span);
 }

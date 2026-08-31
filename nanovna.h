@@ -1416,7 +1416,7 @@ void clear_all_config_prop_data(void);
  * bands.c - NanoAnalyzer band presets (center frequency + bandwidth)
  */
 #define BAND_NAME_LEN 10
-#define BANDS_MAX     24
+#define BANDS_MAX     28
 typedef struct {
   char   name[BAND_NAME_LEN];
   freq_t center;

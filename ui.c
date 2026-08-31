@@ -815,7 +815,7 @@ static uint8_t edit_band_idx;
 static const menuitem_t menu_band_edit[];
 
 static bool band_is_active(const band_preset_t *bp) {
-  return bp->name[0] && FREQ_IS_CENTERSPAN() &&
+  return bp->center && FREQ_IS_CENTERSPAN() &&
          get_sweep_frequency(ST_CENTER) == bp->center &&
          get_sweep_frequency(ST_SPAN)   == bp->span;
 }
@@ -826,12 +826,12 @@ static UI_FUNCTION_ADV_CALLBACK(menu_band_acb) {
   if (data >= BANDS_MAX) return;
   const band_preset_t *bp = &bands[data];
   if (b) {
-    b->p1.text = bp->name;
+    b->p1.text = bp->name[0] ? bp->name : "- empty -";
     if (band_is_active(bp)) b->icon = BUTTON_ICON_CHECK;
     return;
   }
-  if (band_is_active(bp)) {
-    edit_band_idx = data;
+  if (bp->name[0] == 0 || bp->center == 0 || band_is_active(bp)) {
+    edit_band_idx = data;                // empty slot, or tap the active band again -> edit
     menu_push_submenu(menu_band_edit);
     return;
   }
@@ -2312,10 +2312,26 @@ static const menuitem_t menu_bands_svc[] = {
   { MT_NEXT, 0, NULL, menu_back } // next-> menu_back
 };
 
+static const menuitem_t menu_bands_custom[] = {
+  { MT_ADV_CALLBACK, 17, "%s", menu_band_acb },
+  { MT_ADV_CALLBACK, 18, "%s", menu_band_acb },
+  { MT_ADV_CALLBACK, 19, "%s", menu_band_acb },
+  { MT_ADV_CALLBACK, 20, "%s", menu_band_acb },
+  { MT_ADV_CALLBACK, 21, "%s", menu_band_acb },
+  { MT_ADV_CALLBACK, 22, "%s", menu_band_acb },
+  { MT_ADV_CALLBACK, 23, "%s", menu_band_acb },
+  { MT_ADV_CALLBACK, 24, "%s", menu_band_acb },
+  { MT_ADV_CALLBACK, 25, "%s", menu_band_acb },
+  { MT_ADV_CALLBACK, 26, "%s", menu_band_acb },
+  { MT_ADV_CALLBACK, 27, "%s", menu_band_acb },
+  { MT_NEXT, 0, NULL, menu_back } // next-> menu_back
+};
+
 const menuitem_t menu_bands[] = {
   { MT_SUBMENU, 0, "HF\n 160-10m",   menu_bands_hf },
   { MT_SUBMENU, 0, "VHF / UHF",      menu_bands_vu },
   { MT_SUBMENU, 0, "GMRS / MURS\n / CB", menu_bands_svc },
+  { MT_SUBMENU, 0, "CUSTOM",         menu_bands_custom },
   { MT_NEXT, 0, NULL, menu_back } // next-> menu_back
 };
 
