@@ -2016,7 +2016,7 @@ static const menuitem_t menu_calop[] = {
   { MT_ADV_CALLBACK, CAL_OPEN,  "OPEN",  menu_calop_acb },
   { MT_ADV_CALLBACK, CAL_SHORT, "SHORT", menu_calop_acb },
   { MT_ADV_CALLBACK, CAL_LOAD,  "LOAD",  menu_calop_acb },
-  { MT_CALLBACK, 0,             "DONE",  menu_caldone_cb },
+  { MT_CALLBACK, 0,             "APPLY", menu_caldone_cb },
   { MT_NEXT,     0, NULL, menu_back } // next-> menu_back
 };
 
@@ -2076,7 +2076,7 @@ const menuitem_t menu_power[] = {
 const menuitem_t menu_cal[] = {
   { MT_CALLBACK,     0, "WIDE SPAN\n for cal",  menu_cal_span_cb },
   { MT_SUBMENU,      0, "CALIBRATE\n O S L",    menu_calop },
-  { MT_ADV_CALLBACK, 0, "APPLY",                menu_cal_apply_acb },
+  { MT_ADV_CALLBACK, 0, "CORRECTION\n ON / OFF", menu_cal_apply_acb },
   { MT_CALLBACK,     0, "RESET",                menu_cal_reset_cb },
   { MT_ADV_CALLBACK, 0, "POWER  AUTO",          menu_power_sel_acb },
   { MT_NEXT, 0, NULL, menu_back } // next-> menu_back
