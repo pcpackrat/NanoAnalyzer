@@ -226,8 +226,9 @@ New `#define __REFLECTION_ONLY__`:
    `menu_top` -> BANDS -> {HF, VHF/UHF, GMRS/MURS/CB} -> tap applies center+BW and
    returns to the sweep (check mark on the active preset). STIMULUS renamed
    "CUSTOM FREQ / BW". BANDS_MAX 24 (7 spare slots for Phase 4 custom presets).
-4. EDIT PRESETS: edit center/BW/name, save/reset to flash. Confirm CB freeband
-   widening persists across power cycle. `bands_reset_defaults()` already exists.
+4. **[DONE]** EDIT PRESETS: tap the active band again -> edit menu (CENTER FREQ /
+   BANDWIDTH / NAME keypads + RESET ALL PRESETS). Edits apply to the live sweep
+   and `bands_save()` to flash immediately. KM_BAND_CENTER/SPAN/NAME keypad modes.
 5. Display layouts + auto-marker-to-min. Confirm all 3 modes.
 6. Cal UX simplification + CAL SPAN shortcut. Full wideband SOL, then walk every
    band preset.
