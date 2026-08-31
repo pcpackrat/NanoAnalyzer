@@ -29,6 +29,15 @@ static uint16_t redraw_request = 0; // contains REDRAW_XXX flags
 static uint16_t area_width  = AREA_WIDTH_NORMAL;
 static uint16_t area_height = AREA_HEIGHT_NORMAL;
 
+// NanoAnalyzer: the graph shrinks in the data layouts to leave a readout strip below it
+#define PLOT_H_DATA        152
+#define PLOT_H_GRAPH_DATA  228
+static inline int plot_h(void) {
+  return display_mode == DISPLAY_DATA       ? PLOT_H_DATA :
+         display_mode == DISPLAY_GRAPH_DATA ? PLOT_H_GRAPH_DATA : HEIGHT;
+}
+static inline int plot_gridy(void) { return plot_h() / NGRIDY; }
+
 // Cell render use spi buffer
 static pixel_t *cell_buffer;
 
@@ -220,8 +229,8 @@ static inline int rectangular_grid_x(uint32_t x) {
 }
 
 static inline int rectangular_grid_y(uint32_t y) {
-  if ((uint32_t)y > HEIGHT) return 0;
-  return (y % GRIDY) == 0;
+  if ((int)y > plot_h()) return 0;
+  return (y % plot_gridy()) == 0;
 }
 
 //**************************************************************************************
@@ -1036,7 +1045,7 @@ static void cell_draw_all_refpos(int x0, int y0) {
     // Skip draw reference position for disabled/smith/polar traces
     if (!trace[t].enabled || ((1 << trace[t].type) & (ROUND_GRID_MASK)))
      continue;
-    int y = HEIGHT - float2int(get_trace_refpos(t) * GRIDY) - y0 - REFERENCE_Y_OFFSET;
+    int y = plot_h() - float2int(get_trace_refpos(t) * plot_gridy()) - y0 - REFERENCE_Y_OFFSET;
     if ((uint32_t)(y + REFERENCE_HEIGHT) < CELLHEIGHT + REFERENCE_HEIGHT) {
       lcd_set_foreground(LCD_TRACE_1_COLOR + t);
       cell_blit_bitmap(x, y, REFERENCE_WIDTH, REFERENCE_HEIGHT, (const uint8_t*)reference_bitmap);
@@ -1147,10 +1156,12 @@ static void trace_into_index(int t) {
   index_t *index = trace_index[t];
   uint32_t type    = 1<<trace[t].type;
   get_value_cb_t c = trace_info_list[trace[t].type].get_value_cb; // Get callback for value calculation
-  float refpos = HEIGHT - (get_trace_refpos(t))*GRIDY + 0.5f;     // 0.5 for pixel align
+  const int gh = plot_h();
+  const int ggy = plot_gridy();
+  float refpos = gh - (get_trace_refpos(t))*ggy + 0.5f;          // 0.5 for pixel align
   float scale = get_trace_scale(t);
   if (type & RECTANGULAR_GRID_MASK) {                             // Run build for rect grid
-    const float dscale = GRIDY / scale;
+    const float dscale = ggy / scale;
     if (type & (1<<TRC_SWR)) refpos+= dscale;                     // For SWR need shift value by 1.0 down
     uint32_t dx = ((WIDTH)<<16) / (sweep_points-1), x = (CELLOFFSETX<<16) + dx * start + 0x8000;
     int32_t y;
@@ -1160,8 +1171,8 @@ static void trace_into_index(int t) {
         y = 0;
       } else {
         y = refpos - v * dscale;
-             if (y <      0) y = 0;
-        else if (y > HEIGHT) y = HEIGHT;
+             if (y <   0) y = 0;
+        else if (y > gh) y = gh;
       }
       mark_set_index(index, i, (uint16_t)(x>>16), y);
     }
@@ -1209,6 +1220,7 @@ static void plot_into_index(void) {
 static void cell_draw_grid_values(int x0, int y0) {
   // Skip not selected trace
   if (current_trace == TRACE_INVALID) return;
+  if (display_mode != DISPLAY_GRAPH) return;   // NanoAnalyzer: readout strip shows the values instead
   // Skip for SMITH/POLAR and off trace
   uint32_t trace_type = 1 << trace[current_trace].type;
   if (trace_type & ROUND_GRID_MASK) return;
@@ -1262,6 +1274,7 @@ static void cell_draw_marker_info(int x0, int y0) {
   int t, mk, xpos, ypos;
   if (active_marker == MARKER_INVALID || current_trace == TRACE_INVALID) // No markers or no traces
     return;
+  if (display_mode != DISPLAY_GRAPH) return;   // NanoAnalyzer: readout strip replaces this
   int active_marker_idx = markers[active_marker].index;
   int j = 0;
   // Marker (for current selected trace) display mode (selected more then 1 marker)
@@ -1543,6 +1556,8 @@ static void draw_cell(int x0, int y0) {
 
 void set_area_size(uint16_t w, uint16_t h) {
   area_width  = w;
+  // NanoAnalyzer: keep the graph cells above the readout strip in the data layouts
+  if (h && (int)h > plot_h()) h = plot_h();
   area_height = h;
 }
 
@@ -1730,31 +1745,39 @@ static void draw_battery_status(void) {
 //            NanoAnalyzer SWR / R / X / |Z| readout overlay (display_mode 1 and 2)
 //**************************************************************************************
 static void draw_readout(void) {
-  if (display_mode == DISPLAY_GRAPH || active_marker == MARKER_INVALID) return;
+  if (display_mode == DISPLAY_GRAPH) return;
+
+  int y0 = plot_h() + 3;
+  int x0 = OFFSETX + 2;
+  char buf[40], sbuf[12], fbuf[16];
+  lcd_set_colors(LCD_FG_COLOR, LCD_BG_COLOR);
+
+  if (active_marker == MARKER_INVALID) {
+    lcd_drawstring_size("no marker", x0, y0, 2);
+    return;
+  }
   int idx = markers[active_marker].index;
   if (idx < 0) idx = 0; else if (idx >= sweep_points) idx = sweep_points - 1;
   const float *v = measured[0][idx];
-  float s = swr(idx, v), r = resistance(idx, v), x = reactance(idx, v), z = mod_z(idx, v);
-  char sbuf[12], buf[32];
-  if (vna_isinff(s)) strcpy(sbuf, "----"); else plot_printf(sbuf, sizeof sbuf, "%.2f", s);
+  float s = swr(idx, v);
+  int r = (int)resistance(idx, v), x = (int)reactance(idx, v), z = (int)mod_z(idx, v);
+  if (vna_isinff(s)) strcpy(sbuf, ">10   "); else plot_printf(sbuf, sizeof sbuf, "%.2f  ", s);
+  freq_t mf = get_marker_frequency(active_marker) + 500;
+  plot_printf(fbuf, sizeof fbuf, "%u.%03uMHz", mf / 1000000, (mf / 1000) % 1000);
+  const char *tag = (props_mode & TD_MARKER_TRACK) ? "SWR MIN" : "MARKER";
 
-  lcd_set_colors(LCD_FG_COLOR, LCD_BG_COLOR);
   if (display_mode == DISPLAY_GRAPH_DATA) {
-    int x0 = OFFSETX + CELLOFFSETX + 2, y0 = OFFSETY + 2;
-    lcd_fill(x0 - 2, y0 - 2, 15 * sFONT_WIDTH + 4, 4 * sFONT_STR_HEIGHT + 4);
-    lcd_set_font(FONT_SMALL);
-    plot_printf(buf, sizeof buf, "SWR %s", sbuf);          lcd_drawstring(x0, y0, buf); y0 += sFONT_STR_HEIGHT;
-    plot_printf(buf, sizeof buf, "R   %.1f" S_OHM, r);      lcd_drawstring(x0, y0, buf); y0 += sFONT_STR_HEIGHT;
-    plot_printf(buf, sizeof buf, "X   %+.1f" S_OHM, x);     lcd_drawstring(x0, y0, buf); y0 += sFONT_STR_HEIGHT;
-    plot_printf(buf, sizeof buf, "|Z| %.1f" S_OHM, z);      lcd_drawstring(x0, y0, buf);
-    lcd_set_font(FONT_NORMAL);
+    plot_printf(buf, sizeof buf, "%s  %s   SWR %s   ", tag, fbuf, sbuf);
+    lcd_drawstring_size(buf, x0, y0, 2);
+    plot_printf(buf, sizeof buf, "R %d   X %+d   |Z| %d " S_OHM "     ", r, x, z);
+    lcd_drawstring_size(buf, x0, y0 + 2 * FONT_GET_HEIGHT + 4, 2);
   } else { // DISPLAY_DATA
-    int x0 = OFFSETX + 8;
-    lcd_fill(0, 0, area_width, 150);
-    lcd_drawstring_size("SWR", x0, 8, 2);
-    lcd_drawstring_size(sbuf, x0, 8 + 2 * FONT_GET_HEIGHT + 2, 5);
-    plot_printf(buf, sizeof buf, "R %.0f   X %+.0f   |Z| %.0f " S_OHM, r, x, z);
-    lcd_drawstring_size(buf, x0, 8 + 2 * FONT_GET_HEIGHT + 2 + 5 * FONT_GET_HEIGHT + 6, 2);
+    plot_printf(buf, sizeof buf, "%s  %s     ", tag, fbuf);
+    lcd_drawstring_size(buf, x0, y0, 2);
+    lcd_drawstring_size("SWR", x0, y0 + 2 * FONT_GET_HEIGHT + 4, 2);
+    lcd_drawstring_size(sbuf, x0, y0 + 4 * FONT_GET_HEIGHT + 6, 5);
+    plot_printf(buf, sizeof buf, "R %d   X %+d   |Z| %d " S_OHM "     ", r, x, z);
+    lcd_drawstring_size(buf, x0, y0 + 4 * FONT_GET_HEIGHT + 6 + 5 * FONT_GET_HEIGHT + 6, 2);
   }
 }
 

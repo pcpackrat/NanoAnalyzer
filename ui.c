@@ -852,6 +852,7 @@ static UI_FUNCTION_ADV_CALLBACK(menu_layout_acb) {
   if (b) { b->p1.text = names[display_mode < DISPLAY_MODE_COUNT ? display_mode : 0]; return; }
   display_mode = (display_mode + 1) % DISPLAY_MODE_COUNT;
   config_save();
+  set_area_size(AREA_WIDTH_NORMAL - MENU_BUTTON_WIDTH, AREA_HEIGHT_NORMAL); // re-clamp graph height for the new layout
   request_to_redraw(REDRAW_CLRSCR | REDRAW_AREA);
 }
 
