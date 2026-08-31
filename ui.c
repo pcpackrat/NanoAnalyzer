@@ -2556,9 +2556,6 @@ const menuitem_t menu_device[] = {
 #ifdef USE_VARIABLE_OFFSET_MENU
   { MT_ADV_CALLBACK, 0,            "IF OFFSET\n " R_LINK_COLOR "%d" S_Hz,      menu_offset_sel_acb },
 #endif
-#ifdef __USE_BACKUP__
-  { MT_ADV_CALLBACK, VNA_MODE_BACKUP,"REMEMBER\nSTATE",                        menu_vna_mode_acb},
-#endif
 #ifdef __FLIP_DISPLAY__
   { MT_ADV_CALLBACK, VNA_MODE_FLIP_DISPLAY, "FLIP\nDISPLAY",                   menu_vna_mode_acb},
 #endif

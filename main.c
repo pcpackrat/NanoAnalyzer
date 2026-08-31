@@ -989,7 +989,8 @@ void update_backup_data(void) {
 
 static void load_settings(void) {
   load_default_properties();                                     // Load default settings
-  if (config_recall() == 0 && VNA_MODE(VNA_MODE_BACKUP)) {       // Config loaded ok and need restore backup if enabled
+  // NanoAnalyzer: always restore the last sweep state on power-up (remember last band)
+  if (config_recall() == 0) {
     backup_0 bk = {.v = get_backup_data32(0)};
     if (bk.v != 0) {                                             // if backup data valid
       if (bk.id < SAVEAREA_MAX && caldata_recall(bk.id) == 0) {  // Slot valid and Load ok
