@@ -211,11 +211,15 @@ New `#define __REFLECTION_ONLY__`:
    key `nanoanalyzer_deploy` pushes to GitHub. Stock `H4.bin` built (text 90 KB,
    bss 40 KB) and committed to `bin/` (commit `7d5d831`). **Pending: user flashes
    `bin/H4.bin` to confirm the loop end-to-end.**
-1. Strip: disable feature flags, delete dead menus, `__REFLECTION_ONLY__`,
-   `def_trace` → SWR/R/X/|Z|, trim S11 format menu. Build; user flashes; confirm
-   basic S11 sweep + SWR trace on the H4.
-2. Center/bandwidth: STIMULUS relabel, `TD_CENTER_SPAN` default, CUSTOM menu.
-   Build; confirm center/BW entry gives the expected span.
+1. **[DONE]** Strip: disabled SD/measure/remote/smooth flags, `__REFLECTION_ONLY__`
+   (CH0-only sweep), `def_trace` → SWR/R/X/|Z|, FORMAT menu → SWR/RESISTANCE/
+   REACTANCE/|Z|, dropped FORMAT S21 / CHANNEL / TRANSFORM / E-DELAY / S21 OFFSET
+   from DISPLAY+SCALE, MARKER OPERATIONS → ->CENTER/->BANDWIDTH. Version string
+   "NanoAnalyzer 0.1a". Verified on H4: single SWR trace, MEASURE/SD CARD gone.
+   (commits 4cb07c8, 4b21003, 4f6c573)
+2. **[DONE]** Center/bandwidth: STIMULUS = CENTER FREQ + BANDWIDTH + JOG STEP +
+   SWEEP POINTS; keypad labels updated; `load_default_properties` defaults to
+   20 m (14.000-14.350) in `TD_CENTER_SPAN` mode. CUSTOM = this STIMULUS menu.
 3. Band presets: `bands.c`, flash page, BANDS menu tree, apply-preset path.
    Build; confirm each band loads and sweeps with interpolated cal.
 4. EDIT PRESETS: edit center/BW/name, save/reset to flash. Confirm CB freeband
