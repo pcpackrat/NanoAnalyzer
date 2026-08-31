@@ -742,48 +742,30 @@ static UI_FUNCTION_ADV_CALLBACK(menu_calop_acb) {
   selection = c_list[data].next;
 }
 
-static UI_FUNCTION_ADV_CALLBACK(menu_cal_enh_acb) {
-  (void)data;
-  if (b) {
-    b->icon = (cal_status&CALSTAT_ENHANCED_RESPONSE) ? BUTTON_ICON_CHECK : BUTTON_ICON_NOCHECK;
-    return;
-  }
-  // toggle applying correction
-  cal_status ^= CALSTAT_ENHANCED_RESPONSE;
-  request_to_redraw(REDRAW_CAL_STATUS);
-}
-
-extern const menuitem_t menu_save[];
+// NanoAnalyzer: DONE computes the error terms and saves them to slot 0
+// (the single wideband calibration that every band interpolates from)
 static UI_FUNCTION_CALLBACK(menu_caldone_cb) {
+  (void)data;
   cal_done();
-  menu_move_back(false);
-  if (data == 0)
-    menu_push_submenu(menu_save);
+  caldata_save(0);
+  menu_move_back(true);
+  request_to_redraw(REDRAW_CAL_STATUS | REDRAW_AREA);
 }
 
 static UI_FUNCTION_CALLBACK(menu_cal_reset_cb) {
   (void)data;
   // RESET
-  cal_status&= CALSTAT_ENHANCED_RESPONSE; // leave ER state
+  cal_status &= CALSTAT_ENHANCED_RESPONSE; // leave ER state
   lastsaveid = NO_SAVE_SLOT;
-  //set_power(SI5351_CLK_DRIVE_STRENGTH_AUTO);
   request_to_redraw(REDRAW_CAL_STATUS);
 }
 
-static UI_FUNCTION_ADV_CALLBACK(menu_cal_range_acb) {
+// NanoAnalyzer: set a wide sweep so one SOL calibration covers every band
+static UI_FUNCTION_CALLBACK(menu_cal_span_cb) {
   (void)data;
-  bool calibrated = cal_status & (CALSTAT_ES|CALSTAT_ER|CALSTAT_ET|CALSTAT_ED|CALSTAT_EX|CALSTAT_OPEN|CALSTAT_SHORT|CALSTAT_THRU);
-  if (!calibrated) return;
-  if (b) {
-    b->bg = (cal_status & CALSTAT_INTERPOLATED) ? LCD_INTERP_CAL_COLOR : LCD_MENU_COLOR;
-    plot_printf(b->label, sizeof(b->label), "CAL: %dp\n %.6F" S_Hz "\n %.6F" S_Hz, cal_sweep_points, (float)cal_frequency0, (float)cal_frequency1);
-    return;
-  }
-  // Reset range to calibration
-  if (cal_status & CALSTAT_INTERPOLATED) {
-    reset_sweep_frequency();
-    set_power(cal_power);
-  }
+  set_sweep_frequency(ST_CENTER, 300500000);   // 1 MHz .. 600 MHz
+  set_sweep_frequency(ST_SPAN,   599000000);
+  menu_move_back(true);
 }
 
 static UI_FUNCTION_ADV_CALLBACK(menu_cal_apply_acb) {
@@ -2029,15 +2011,12 @@ static const menuitem_t menu_sdcard[] = {
 };
 #endif
 
+// NanoAnalyzer: reflection-only SOL calibration
 static const menuitem_t menu_calop[] = {
   { MT_ADV_CALLBACK, CAL_OPEN,  "OPEN",  menu_calop_acb },
   { MT_ADV_CALLBACK, CAL_SHORT, "SHORT", menu_calop_acb },
   { MT_ADV_CALLBACK, CAL_LOAD,  "LOAD",  menu_calop_acb },
-  { MT_ADV_CALLBACK, CAL_ISOLN, "ISOLN", menu_calop_acb },
-  { MT_ADV_CALLBACK, CAL_THRU,  "THRU",  menu_calop_acb },
-//{ MT_ADV_CALLBACK, KM_EDELAY, "E-DELAY", menu_keyboard_acb },
   { MT_CALLBACK, 0,             "DONE",  menu_caldone_cb },
-  { MT_CALLBACK, 1,             "DONE IN RAM",  menu_caldone_cb },
   { MT_NEXT,     0, NULL, menu_back } // next-> menu_back
 };
 
@@ -2095,16 +2074,11 @@ const menuitem_t menu_power[] = {
 };
 
 const menuitem_t menu_cal[] = {
-  { MT_SUBMENU,      0, "CALIBRATE",     menu_calop },
-  { MT_ADV_CALLBACK, 0, "POWER  AUTO",   menu_power_sel_acb },
-  { MT_SUBMENU,      0, "SAVE",          menu_save },
-  { MT_ADV_CALLBACK, 0, "RANGE",         menu_cal_range_acb },
-  { MT_CALLBACK,     0, "RESET",         menu_cal_reset_cb },
-  { MT_ADV_CALLBACK, 0, "APPLY",         menu_cal_apply_acb },
-  { MT_ADV_CALLBACK, 0, "ENHANCED\nRESPONSE", menu_cal_enh_acb},
-#ifdef __VNA_Z_RENORMALIZATION__
-  { MT_ADV_CALLBACK, KM_CAL_LOAD_R, "STANDARD\nLOAD R " R_LINK_COLOR "%bF" S_OHM, menu_keyboard_acb},
-#endif
+  { MT_CALLBACK,     0, "WIDE SPAN\n for cal",  menu_cal_span_cb },
+  { MT_SUBMENU,      0, "CALIBRATE\n O S L",    menu_calop },
+  { MT_ADV_CALLBACK, 0, "APPLY",                menu_cal_apply_acb },
+  { MT_CALLBACK,     0, "RESET",                menu_cal_reset_cb },
+  { MT_ADV_CALLBACK, 0, "POWER  AUTO",          menu_power_sel_acb },
   { MT_NEXT, 0, NULL, menu_back } // next-> menu_back
 };
 
