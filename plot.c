@@ -1506,7 +1506,7 @@ static void cell_draw_readout(int x0, int y0) {
   if (display_mode == DISPLAY_GRAPH_DATA) {
     plot_printf(line, sizeof line, "%s %u.%03uM  SWR %s", tag, (unsigned)(mf/1000000), (unsigned)((mf/1000)%1000), sbuf);
     cell_str_scale(xb - x0, y1 - y0, 2, line);
-    plot_printf(line, sizeof line, "R %d   X %+d   |Z| %d " S_OHM, r, x, z);
+    plot_printf(line, sizeof line, "R %d   X %+d   IMP %d " S_OHM, r, x, z);
     cell_str_scale(xb - x0, y1 + 2 * FONT_STR_HEIGHT + 6 - y0, 2, line);
   } else { // DISPLAY_DATA
     plot_printf(line, sizeof line, "%s  %u.%03u MHz", tag, (unsigned)(mf/1000000), (unsigned)((mf/1000)%1000));
@@ -1514,7 +1514,7 @@ static void cell_draw_readout(int x0, int y0) {
     int yn = y1 + 2 * FONT_STR_HEIGHT + 6;
     cell_str_scale(xb - x0, yn + (NUM_FONT_GET_HEIGHT * 2 - 2 * FONT_GET_HEIGHT) / 2 - y0, 2, "SWR");
     cell_draw_bignum(xb + 8 * FONT_WIDTH - x0, yn - y0, sbuf, 2);
-    plot_printf(line, sizeof line, "R %d   X %+d   |Z| %d " S_OHM, r, x, z);
+    plot_printf(line, sizeof line, "R %d   X %+d   IMP %d " S_OHM, r, x, z);
     cell_str_scale(xb - x0, yn + NUM_FONT_GET_HEIGHT * 2 + 6 - y0, 2, line);
   }
 }
