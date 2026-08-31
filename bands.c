@@ -62,4 +62,5 @@ void band_apply(int idx) {
   if (bands[idx].center == 0) return;   // empty slot
   set_sweep_frequency(ST_CENTER, bands[idx].center);
   set_sweep_frequency(ST_SPAN,   bands[idx].span);
+  state_save();                         // remember this band on next power-up
 }

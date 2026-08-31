@@ -181,8 +181,9 @@ void initI2S(void *buffer, uint16_t count);
 #define SAVE_CONFIG_SIZE        0x00000800
 // Depend from properties_t size, should be aligned by FLASH_PAGESIZE
 #define SAVE_PROP_CONFIG_SIZE   0x00004000
-// NanoAnalyzer: band preset table, one page just below the properties area
+// NanoAnalyzer: band preset table + last-sweep-state, one page each below properties
 #define SAVE_BANDS_SIZE         0x00000800
+#define SAVE_STATE_SIZE         0x00000800
 #else
 // For STM32F072xB CPU setting
 #define FLASH_START_ADDRESS   0x08000000
@@ -196,8 +197,9 @@ void initI2S(void *buffer, uint16_t count);
 #define SAVE_CONFIG_SIZE        0x00000800
 // Depend from properties_t size, should be aligned by FLASH_PAGESIZE
 #define SAVE_PROP_CONFIG_SIZE   0x00001800
-// NanoAnalyzer: band preset table
+// NanoAnalyzer: band preset table + last-sweep-state
 #define SAVE_BANDS_SIZE         0x00000800
+#define SAVE_STATE_SIZE         0x00000800
 #endif
 
 // Save config_t and properties_t flash area (see flash7 from *.ld settings)
@@ -207,8 +209,9 @@ void initI2S(void *buffer, uint16_t count);
 #define SAVE_CONFIG_ADDR        (FLASH_START_ADDRESS + FLASH_TOTAL_SIZE - SAVE_CONFIG_SIZE)
 // Properties save area before config
 #define SAVE_PROP_CONFIG_ADDR   (FLASH_START_ADDRESS + FLASH_TOTAL_SIZE - SAVE_FULL_AREA_SIZE)
-// NanoAnalyzer: band preset page, one FLASH_PAGESIZE page below the properties area
+// NanoAnalyzer: band preset page + last-sweep-state page, below the properties area
 #define SAVE_BANDS_ADDR         (SAVE_PROP_CONFIG_ADDR - SAVE_BANDS_SIZE)
+#define SAVE_STATE_ADDR         (SAVE_BANDS_ADDR - SAVE_STATE_SIZE)
 
 // Erase settings on page
 void flash_erase_pages(uint32_t page_address, uint32_t size);

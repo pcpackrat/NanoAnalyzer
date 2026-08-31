@@ -119,6 +119,8 @@ static bool sweep(bool break_on_operation, uint16_t ch_mask);
 static void transform_domain(uint16_t ch_mask);
 
 uint8_t sweep_mode = SWEEP_ENABLE;
+// NanoAnalyzer: sweeps remaining before the last range is written to flash (0 = idle)
+int state_save_countdown = 0;
 // current sweep point (used for continue sweep if user break)
 static uint16_t p_sweep = 0;
 // Sweep measured data
@@ -273,6 +275,9 @@ static THD_FUNCTION(Thread1, arg)
     // plot trace and other indications as raster
     draw_all();
 #endif
+    // persist the sweep range once it has settled
+    if (state_save_countdown && --state_save_countdown == 0)
+      state_save();
   }
 }
 
@@ -988,27 +993,16 @@ void update_backup_data(void) {
 }
 
 static void load_settings(void) {
-  load_default_properties();                                     // Load default settings
-  // NanoAnalyzer: always restore the last sweep state on power-up (remember last band)
-  if (config_recall() == 0) {
-    backup_0 bk = {.v = get_backup_data32(0)};
-    if (bk.v != 0) {                                             // if backup data valid
-      if (bk.id < SAVEAREA_MAX && caldata_recall(bk.id) == 0) {  // Slot valid and Load ok
-        sweep_points = bk.points;                                // Restore settings depend from calibration data
-        frequency0 = get_backup_data32(1);
-        frequency1 = get_backup_data32(2);
-        var_freq   = get_backup_data32(3);
-      } else
-        caldata_recall(0);
-      // Here need restore settings not depend from cal data
-      config._brightness = bk.brightness;
-      lever_mode         = bk.leveler;
-      config._vna_mode   = get_backup_data32(4) | (1<<VNA_MODE_BACKUP); // refresh backup settings
-      set_bandwidth(bk.bw);
-    } else
-      caldata_recall(0);   // Try load 0 slot
-  } else
-    caldata_recall(0);   // Try load 0 slot
+  load_default_properties();          // defaults (fallback: 20 m)
+  config_recall();                    // device settings (touch cal, palette, ...)
+  caldata_recall(0);                  // wideband SOL calibration
+  backup_0 bk = {.v = get_backup_data32(0)};
+  if (bk.v != 0) {                    // brightness / bandwidth / leveler survive a reset via RTC
+    config._brightness = bk.brightness;
+    lever_mode         = bk.leveler;
+    set_bandwidth(bk.bw);
+  }
+  state_recall();                     // last sweep range from flash -> power up on the last band
   bands_init();
   update_frequencies();
 #ifdef __VNA_MEASURE_MODULE__
@@ -1541,6 +1535,7 @@ update_frequencies(void)
 
   request_to_redraw(REDRAW_BACKUP | REDRAW_PLOT | REDRAW_CAL_STATUS | REDRAW_FREQUENCY | REDRAW_AREA);
   RESET_SWEEP;
+  state_save_countdown = 40;   // persist the new range after it settles (debounce jog tuning)
 }
 
 void

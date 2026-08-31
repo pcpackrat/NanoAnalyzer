@@ -1436,6 +1436,10 @@ void band_apply(int idx);         // set sweep center + bandwidth from bands[idx
 
 int  bands_recall(void);          // data_storage.c: load table from flash (-1 on fail)
 
+// Last sweep range, persisted to flash so the unit powers up on the last band used
+void state_save(void);
+void state_recall(void);
+
 /*
  * ui.c
  */

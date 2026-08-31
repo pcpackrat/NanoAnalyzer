@@ -115,8 +115,8 @@ int caldata_recall(uint32_t id) {
 void clear_all_config_prop_data(void) {
   lastsaveid = NO_SAVE_SLOT;
   checksum_ok = 0;
-  // unlock and erase flash pages (band preset page sits just below the properties area)
-  flash_erase_pages(SAVE_BANDS_ADDR, SAVE_BANDS_SIZE + SAVE_FULL_AREA_SIZE);
+  // unlock and erase flash pages (state + bands pages sit just below the properties area)
+  flash_erase_pages(SAVE_STATE_ADDR, SAVE_STATE_SIZE + SAVE_BANDS_SIZE + SAVE_FULL_AREA_SIZE);
 }
 
 //
@@ -147,5 +147,41 @@ int bands_recall(void) {
     return -1;
   memcpy(bands, src->band, sizeof(bands));
   return 0;
+}
+
+//
+// NanoAnalyzer last-sweep-state storage (remember the last band across power cycles)
+//
+#define STATE_MAGIC 0x54415453  // "STAT"
+
+typedef struct {
+  uint32_t magic;
+  freq_t   f0, f1;
+  uint32_t points;
+  uint32_t checksum;
+} sweep_state_t;
+
+void state_save(void) {
+  static freq_t l0, l1; static uint32_t lp;
+  if (frequency0 == l0 && frequency1 == l1 && sweep_points == lp) return;  // no change
+  sweep_state_t s = { .magic = STATE_MAGIC, .f0 = frequency0, .f1 = frequency1, .points = sweep_points };
+  s.checksum = checksum(&s, sizeof s - sizeof s.checksum);
+  flash_erase_pages(SAVE_STATE_ADDR, SAVE_STATE_SIZE);
+  flash_program_half_word_buffer((uint16_t*)SAVE_STATE_ADDR, (uint16_t*)&s, sizeof s);
+  l0 = frequency0; l1 = frequency1; lp = sweep_points;
+}
+
+void state_recall(void) {
+  const sweep_state_t *src = (const sweep_state_t*)SAVE_STATE_ADDR;
+  if (src->magic != STATE_MAGIC ||
+      checksum(src, sizeof *src - sizeof src->checksum) != src->checksum)
+    return;
+  if (src->f0 < FREQUENCY_MIN || src->f1 > FREQUENCY_MAX || src->f0 >= src->f1)
+    return;
+  frequency0 = src->f0;
+  frequency1 = src->f1;
+  if (src->points >= SWEEP_POINTS_MIN && src->points <= SWEEP_POINTS_MAX)
+    sweep_points = src->points;
+  props_mode |= TD_CENTER_SPAN;
 }
 
