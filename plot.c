@@ -30,8 +30,8 @@ static uint16_t area_width  = AREA_WIDTH_NORMAL;
 static uint16_t area_height = AREA_HEIGHT_NORMAL;
 
 // NanoAnalyzer: the graph shrinks in the data layouts to leave a readout strip below it
-#define PLOT_H_DATA        150
-#define PLOT_H_GRAPH_DATA  208
+#define PLOT_H_DATA        176
+#define PLOT_H_GRAPH_DATA  228
 static inline int plot_h(void) {
   return display_mode == DISPLAY_DATA       ? PLOT_H_DATA :
          display_mode == DISPLAY_GRAPH_DATA ? PLOT_H_GRAPH_DATA : HEIGHT;
@@ -1404,6 +1404,7 @@ static void cell_draw_marker_info(int x0, int y0) {
 //   (display_mode DISPLAY_GRAPH_DATA and DISPLAY_DATA). Called from draw_cell() so it
 //   composites with the cell buffer - no flicker, and the cell system clears it.
 //**************************************************************************************
+// Scaled numeric font (digits, '.', '-') for the big SWR value
 static void cell_blit_num(int x, int y, uint8_t ch, int sc) {
   const uint8_t *b = NUM_FONT_GET_DATA(ch);
   for (int row = 0; row < NUM_FONT_GET_HEIGHT; row++) {
@@ -1422,54 +1423,100 @@ static void cell_blit_num(int x, int y, uint8_t ch, int sc) {
   }
 }
 
-static int cell_draw_bignum(int x, int y, const char *s, int sc) {
+static void cell_draw_bignum(int x, int y, const char *s, int sc) {
   for (; *s; s++) {
     uint8_t g = (*s == '.') ? KP_PERIOD : (*s >= '0' && *s <= '9') ? (uint8_t)(*s - '0') : KP_MINUS;
     cell_blit_num(x, y, g, sc);
     x += (*s == '.' ? NUM_FONT_GET_WIDTH / 2 + 2 : NUM_FONT_GET_WIDTH + 2) * sc;
   }
-  return x;
+}
+
+// Scaled normal font, for the readout text lines
+static int cell_char_scale(int x, int y, uint8_t ch, int sc) {
+  const uint8_t *b = FONT_GET_DATA(ch);
+  int w = FONT_GET_WIDTH(ch);
+  for (int row = 0; row < FONT_GET_HEIGHT; row++) {
+    uint8_t bits = b[row];
+    for (int col = 0; col < w; col++, bits <<= 1) {
+      if (!(bits & 0x80)) continue;
+      for (int dy = 0; dy < sc; dy++) {
+        int py = y + row * sc + dy;
+        if ((unsigned)py >= CELLHEIGHT) continue;
+        for (int dx = 0; dx < sc; dx++) {
+          int px = x + col * sc + dx;
+          if ((unsigned)px < CELLWIDTH) cell_buffer[py * CELLWIDTH + px] = foreground_color;
+        }
+      }
+    }
+  }
+  return w * sc + sc;
+}
+
+static void cell_str_scale(int x, int y, int sc, const char *s) {
+  for (; *s; s++) x += cell_char_scale(x, y, (uint8_t)*s, sc);
+}
+
+// "14.250 M"
+static void fmt_freq_m(char *b, size_t n, freq_t f) {
+  f += 500;
+  plot_printf(b, n, "%u.%03u M", (unsigned)(f / 1000000), (unsigned)((f / 1000) % 1000));
+}
+
+// bandwidth as "350 k" / "4 M" / "1.20 M"
+static void fmt_bw(char *b, size_t n, freq_t f) {
+  if (f >= 1000000 && f % 1000000 == 0) plot_printf(b, n, "%u M", (unsigned)(f / 1000000));
+  else if (f >= 1000000)                plot_printf(b, n, "%u.%02u M", (unsigned)(f / 1000000), (unsigned)((f / 10000) % 100));
+  else                                  plot_printf(b, n, "%u k", (unsigned)(f / 1000));
 }
 
 static void cell_draw_readout(int x0, int y0) {
   if (display_mode == DISPLAY_GRAPH) return;
   const int xb = OFFSETX + 2;
-  const int yb = plot_h() + 1;                       // right under the graph
+  const int yb = plot_h() + 1;                       // range line, right under the graph
   if (y0 + CELLHEIGHT <= yb) return;                 // cell entirely in the graph area
   lcd_set_foreground(LCD_FG_COLOR);
 
-  // sweep range line, meeting the bottom of the graph:
-  // start at far left, center (+bandwidth) at the graph centre, stop at far right
-  freq_t fa = get_sweep_frequency(ST_START) + 500;
-  freq_t fc = get_sweep_frequency(ST_CENTER) + 500;
-  freq_t fe = get_sweep_frequency(ST_STOP) + 500;
-  char bw[12];
-  plot_printf(bw, sizeof bw, "%.0F" S_Hz, (float)get_sweep_frequency(ST_SPAN));
-  cell_printf(FREQUENCIES_XPOS1 - x0, yb - y0, "%u.%03u",
-              (unsigned)(fa/1000000), (unsigned)((fa/1000)%1000));
-  cell_printf(FREQUENCIES_XPOS3 - x0, yb - y0, "%u.%03u  BW %s",
-              (unsigned)(fc/1000000), (unsigned)((fc/1000)%1000), bw);
-  cell_printf(LCD_WIDTH - OFFSETX - 78 - x0, yb - y0, "%u.%03u MHz",
-              (unsigned)(fe/1000000), (unsigned)((fe/1000)%1000));
+  // range line: start far left, center at graph centre, BW between center and stop, stop far right
+  char fs[16], fc_[16], fe_[16], bw[12];
+  fmt_freq_m(fs,  sizeof fs,  get_sweep_frequency(ST_START));
+  fmt_freq_m(fc_, sizeof fc_, get_sweep_frequency(ST_CENTER));
+  fmt_freq_m(fe_, sizeof fe_, get_sweep_frequency(ST_STOP));
+  fmt_bw(bw, sizeof bw, get_sweep_frequency(ST_SPAN));
+  const int x_start = FREQUENCIES_XPOS1;
+  const int x_stop  = LCD_WIDTH - OFFSETX - 8 * FONT_WIDTH;
+  const int x_ctr   = CELLOFFSETX + WIDTH / 2 - 4 * FONT_WIDTH;
+  const int x_bw    = (x_ctr + x_stop) / 2;
+  cell_printf(x_start - x0, yb - y0, "%s", fs);
+  cell_printf(x_ctr   - x0, yb - y0, "%s", fc_);
+  cell_printf(x_bw    - x0, yb - y0, "BW %s", bw);
+  cell_printf(x_stop  - x0, yb - y0, "%s", fe_);
 
-  const int y1 = yb + FONT_STR_HEIGHT + 3;
-  if (active_marker == MARKER_INVALID) { cell_printf(xb - x0, y1 - y0, "no marker"); return; }
+  const int y1 = yb + FONT_STR_HEIGHT + 10;          // gap under the range line
+  if (active_marker == MARKER_INVALID) { cell_str_scale(xb - x0, y1 - y0, 2, "no marker"); return; }
   int idx = markers[active_marker].index;
   if (idx < 0) idx = 0; else if (idx >= sweep_points) idx = sweep_points - 1;
   const float *v = measured[0][idx];
   float s = swr(idx, v);
   int r = (int)resistance(idx, v), x = (int)reactance(idx, v), z = (int)mod_z(idx, v);
-  char sbuf[10];
+  char sbuf[10], line[40];
   if (vna_isinff(s)) strcpy(sbuf, "10+"); else plot_printf(sbuf, sizeof sbuf, "%.2f", s);
   freq_t mf = get_marker_frequency(active_marker) + 500;
   const char *tag = (props_mode & TD_MARKER_TRACK) ? "SWR MIN" : "MARKER";
 
-  const int sc = 2;
-  cell_printf(xb - x0, y1 - y0, "%s  %u.%03u MHz", tag, (unsigned)(mf/1000000), (unsigned)((mf/1000)%1000));
-  int yn = y1 + FONT_STR_HEIGHT + 3;
-  cell_printf(xb - x0, yn + (NUM_FONT_GET_HEIGHT * sc - FONT_STR_HEIGHT) / 2 - y0, "SWR");
-  cell_draw_bignum(xb + 4 * FONT_WIDTH - x0, yn - y0, sbuf, sc);
-  cell_printf(xb - x0, yn + NUM_FONT_GET_HEIGHT * sc + 4 - y0, "R %d   X %+d   |Z| %d " S_OHM, r, x, z);
+  if (display_mode == DISPLAY_GRAPH_DATA) {
+    plot_printf(line, sizeof line, "%s %u.%03uM  SWR %s", tag, (unsigned)(mf/1000000), (unsigned)((mf/1000)%1000), sbuf);
+    cell_str_scale(xb - x0, y1 - y0, 2, line);
+    plot_printf(line, sizeof line, "R %d   X %+d   |Z| %d " S_OHM, r, x, z);
+    cell_str_scale(xb - x0, y1 + 2 * FONT_STR_HEIGHT + 6 - y0, 2, line);
+  } else { // DISPLAY_DATA
+    plot_printf(line, sizeof line, "%s  %u.%03u MHz", tag, (unsigned)(mf/1000000), (unsigned)((mf/1000)%1000));
+    cell_str_scale(xb - x0, y1 - y0, 2, line);
+    int yn = y1 + 2 * FONT_STR_HEIGHT + 6;
+    cell_str_scale(xb - x0, yn + (NUM_FONT_GET_HEIGHT * 2 - 2 * FONT_GET_HEIGHT) / 2 - y0, 2, "SWR");
+    cell_draw_bignum(xb + 8 * FONT_WIDTH - x0, yn - y0, sbuf, 2);
+    plot_printf(line, sizeof line, "R %d   X %+d   |Z| %d " S_OHM, r, x, z);
+    cell_str_scale(xb - x0, yn + NUM_FONT_GET_HEIGHT * 2 + 6 - y0, 2, line);
+  }
 }
 
 static void draw_cell(int x0, int y0) {
