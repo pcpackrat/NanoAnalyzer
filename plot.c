@@ -1727,6 +1727,38 @@ static void draw_battery_status(void) {
 }
 
 //**************************************************************************************
+//            NanoAnalyzer SWR / R / X / |Z| readout overlay (display_mode 1 and 2)
+//**************************************************************************************
+static void draw_readout(void) {
+  if (display_mode == DISPLAY_GRAPH || active_marker == MARKER_INVALID) return;
+  int idx = markers[active_marker].index;
+  if (idx < 0) idx = 0; else if (idx >= sweep_points) idx = sweep_points - 1;
+  const float *v = measured[0][idx];
+  float s = swr(idx, v), r = resistance(idx, v), x = reactance(idx, v), z = mod_z(idx, v);
+  char sbuf[12], buf[32];
+  if (vna_isinff(s)) strcpy(sbuf, "----"); else plot_printf(sbuf, sizeof sbuf, "%.2f", s);
+
+  lcd_set_colors(LCD_FG_COLOR, LCD_BG_COLOR);
+  if (display_mode == DISPLAY_GRAPH_DATA) {
+    int x0 = OFFSETX + CELLOFFSETX + 2, y0 = OFFSETY + 2;
+    lcd_fill(x0 - 2, y0 - 2, 15 * sFONT_WIDTH + 4, 4 * sFONT_STR_HEIGHT + 4);
+    lcd_set_font(FONT_SMALL);
+    plot_printf(buf, sizeof buf, "SWR %s", sbuf);          lcd_drawstring(x0, y0, buf); y0 += sFONT_STR_HEIGHT;
+    plot_printf(buf, sizeof buf, "R   %.1f" S_OHM, r);      lcd_drawstring(x0, y0, buf); y0 += sFONT_STR_HEIGHT;
+    plot_printf(buf, sizeof buf, "X   %+.1f" S_OHM, x);     lcd_drawstring(x0, y0, buf); y0 += sFONT_STR_HEIGHT;
+    plot_printf(buf, sizeof buf, "|Z| %.1f" S_OHM, z);      lcd_drawstring(x0, y0, buf);
+    lcd_set_font(FONT_NORMAL);
+  } else { // DISPLAY_DATA
+    int x0 = OFFSETX + 8;
+    lcd_fill(0, 0, area_width, 150);
+    lcd_drawstring_size("SWR", x0, 8, 2);
+    lcd_drawstring_size(sbuf, x0, 8 + 2 * FONT_GET_HEIGHT + 2, 5);
+    plot_printf(buf, sizeof buf, "R %.0f   X %+.0f   |Z| %.0f " S_OHM, r, x, z);
+    lcd_drawstring_size(buf, x0, 8 + 2 * FONT_GET_HEIGHT + 2 + 5 * FONT_GET_HEIGHT + 6, 2);
+  }
+}
+
+//**************************************************************************************
 //            Draw all request
 //**************************************************************************************
 void draw_all(void) {
@@ -1749,8 +1781,10 @@ void draw_all(void) {
     if (redraw_request & REDRAW_GRID_VALUE) markmap_grid_values();
 #endif
   }
-  if (redraw_request & (REDRAW_CELLS | REDRAW_MARKER | REDRAW_GRID_VALUE | REDRAW_REFERENCE | REDRAW_AREA))
+  if (redraw_request & (REDRAW_CELLS | REDRAW_MARKER | REDRAW_GRID_VALUE | REDRAW_REFERENCE | REDRAW_AREA)) {
     draw_all_cells();
+    draw_readout();   // NanoAnalyzer overlay (no-op in DISPLAY_GRAPH)
+  }
   if (redraw_request & REDRAW_FREQUENCY)
     draw_frequencies();
   if (redraw_request & REDRAW_CAL_STATUS)

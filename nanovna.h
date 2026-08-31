@@ -1328,8 +1328,8 @@ void testLog(void);        // debug log
 /*
  * flash.c
  */
-#define CONFIG_MAGIC      0x434f4e56 // Config magic value (allow reset on new config version)
-#define PROPERTIES_MAGIC  0x434f4e54 // Properties magic value (allow reset on new properties version)
+#define CONFIG_MAGIC      0x4e414e30 // "NAN0" - NanoAnalyzer config layout (bump to force reset)
+#define PROPERTIES_MAGIC  0x4e414e41 // "NANA" - NanoAnalyzer properties layout (bump to force reset)
 
 #define NO_SAVE_SLOT      ((uint16_t)(-1))
 extern uint16_t lastsaveid;
@@ -1375,6 +1375,13 @@ extern uint16_t lastsaveid;
 #define VNA_MODE(idx)        (config._vna_mode&(1<<idx))
 #define lever_mode           config._lever_mode
 #define IF_OFFSET            config._IF_freq
+
+// NanoAnalyzer display layout: 0 = graph, 1 = graph + readout, 2 = big readout
+#define DISPLAY_GRAPH        0
+#define DISPLAY_GRAPH_DATA   1
+#define DISPLAY_DATA         2
+#define DISPLAY_MODE_COUNT   3
+#define display_mode         config._reserved[0]
 #ifdef __DIGIT_SEPARATOR__
 #define DIGIT_SEPARATOR      (VNA_MODE(VNA_MODE_SEPARATOR) ? ',' : '.')
 #else

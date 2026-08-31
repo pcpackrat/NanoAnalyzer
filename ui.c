@@ -845,6 +845,16 @@ static UI_FUNCTION_CALLBACK(menu_bands_reset_cb) {
   menu_move_back(true);
 }
 
+// NanoAnalyzer: cycle the display layout (graph / graph+readout / big readout)
+static UI_FUNCTION_ADV_CALLBACK(menu_layout_acb) {
+  (void)data;
+  static const char *const names[DISPLAY_MODE_COUNT] = { "GRAPH", "GRAPH+DATA", "DATA" };
+  if (b) { b->p1.text = names[display_mode < DISPLAY_MODE_COUNT ? display_mode : 0]; return; }
+  display_mode = (display_mode + 1) % DISPLAY_MODE_COUNT;
+  config_save();
+  request_to_redraw(REDRAW_CLRSCR | REDRAW_AREA);
+}
+
 enum {
  MENU_CONFIG_TOUCH_CAL = 0,
  MENU_CONFIG_TOUCH_TEST,
@@ -2248,6 +2258,7 @@ const menuitem_t menu_smooth_count[] = {
 const menuitem_t menu_display[] = {
   { MT_ADV_CALLBACK, 0, "TRACE",                               menu_traces_acb },
   { MT_SUBMENU,      0, "FORMAT",                               menu_formatS11 },
+  { MT_ADV_CALLBACK, 0, "LAYOUT\n " R_LINK_COLOR "%s",          menu_layout_acb },
   { MT_SUBMENU,      0, "SCALE",                               menu_scale },
   { MT_ADV_CALLBACK, 0, "IF BANDWIDTH\n " R_LINK_COLOR "%u" S_Hz, menu_bandwidth_sel_acb },
   { MT_NEXT, 0, NULL, menu_back } // next-> menu_back

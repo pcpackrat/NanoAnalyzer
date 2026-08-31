@@ -866,7 +866,7 @@ config_t config = {
   ._harmonic_freq_threshold = FREQUENCY_THRESHOLD,
   ._IF_freq    = FREQUENCY_OFFSET,
   ._touch_cal  = DEFAULT_TOUCH_CONFIG,
-  ._vna_mode   = 0, // USB mode, search max
+  ._vna_mode   = (1u << VNA_MODE_SEARCH), // USB mode; marker search = minimum (SWR dip)
   ._brightness = DEFAULT_BRIGHTNESS,
   ._dac_value   = 1922,
   ._vbat_offset = 420,
@@ -941,7 +941,7 @@ static void load_default_properties(void) {
   current_props._current_trace   = 0;
   current_props._active_marker   = 0;
   current_props._previous_marker = MARKER_INVALID;
-  current_props._mode            = TD_CENTER_SPAN;  // center/bandwidth entry model
+  current_props._mode            = TD_CENTER_SPAN | TD_MARKER_TRACK;  // center/BW model, marker tracks SWR dip
   current_props._reserved        = 0;
   current_props._power           = SI5351_CLK_DRIVE_STRENGTH_AUTO;
   current_props._cal_power       = SI5351_CLK_DRIVE_STRENGTH_AUTO;
