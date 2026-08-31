@@ -1487,7 +1487,7 @@ static void cell_draw_readout(int x0, int y0) {
   fmt_freq_m(fe_, sizeof fe_, get_sweep_frequency(ST_STOP));
   fmt_bw(bw, sizeof bw, get_sweep_frequency(ST_SPAN));
   const int x_start = FREQUENCIES_XPOS1;
-  const int x_stop  = LCD_WIDTH - OFFSETX - 8 * FONT_WIDTH;
+  const int x_stop  = LCD_WIDTH - OFFSETX - 10 * FONT_WIDTH;
   const int x_ctr   = CELLOFFSETX + WIDTH / 2 - 4 * FONT_WIDTH;
   const int x_bw    = (x_ctr + x_stop) / 2;
   cell_printf(x_start - x0, yb - y0, "%s", fs);
