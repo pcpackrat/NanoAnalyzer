@@ -779,18 +779,6 @@ static UI_FUNCTION_ADV_CALLBACK(menu_cal_apply_acb) {
   request_to_redraw(REDRAW_CAL_STATUS);
 }
 
-static UI_FUNCTION_ADV_CALLBACK(menu_recall_acb) {
-  if (b) {
-    const properties_t *p = get_properties(data);
-    if (p)
-      plot_printf(b->label, sizeof(b->label), "%.6F" S_Hz "\n%.6F" S_Hz, (float)p->_frequency0, (float)p->_frequency1);
-    else
-      b->p1.u = data;
-    if (lastsaveid == data) b->icon = BUTTON_ICON_CHECK;
-    return;
-  }
-  load_properties(data);
-}
 
 // NanoAnalyzer band presets
 static uint8_t edit_band_idx;
@@ -883,20 +871,6 @@ static UI_FUNCTION_CALLBACK(menu_dfu_cb) {
 }
 #endif
 
-static UI_FUNCTION_ADV_CALLBACK(menu_save_acb) {
-  if (b) {
-    const properties_t *p = get_properties(data);
-    if (p)
-      plot_printf(b->label, sizeof(b->label), "%.6F" S_Hz "\n%.6F" S_Hz, (float)p->_frequency0, (float)p->_frequency1);
-    else
-      b->p1.u = data;
-    return;
-  }
-  if (caldata_save(data) == 0) {
-    menu_move_back(true);
-    request_to_redraw(REDRAW_BACKUP | REDRAW_CAL_STATUS);
-  }
-}
 
 static UI_FUNCTION_ADV_CALLBACK(menu_trace_acb) {
   if (b) {
@@ -982,40 +956,6 @@ static UI_FUNCTION_ADV_CALLBACK(menu_format_acb) {
     set_trace_type(current_trace, format, channel);
 }
 
-
-static UI_FUNCTION_ADV_CALLBACK(menu_transform_window_acb) {
-  const char *text = "";
-  switch(props_mode & TD_WINDOW) {
-    case TD_WINDOW_MINIMUM: text = "MINIMUM"; data = TD_WINDOW_NORMAL;  break;
-    case TD_WINDOW_NORMAL:  text = "NORMAL";  data = TD_WINDOW_MAXIMUM; break;
-    case TD_WINDOW_MAXIMUM: text = "MAXIMUM"; data = TD_WINDOW_MINIMUM; break;
-  }
-  if(b) {
-    b->p1.text = text;
-    return;
-  }
-  props_mode = (props_mode & ~TD_WINDOW) | data;
-}
-
-static UI_FUNCTION_ADV_CALLBACK(menu_transform_acb) {
-  (void)data;
-  if(b) {
-    if (props_mode & DOMAIN_TIME) b->icon = BUTTON_ICON_CHECK;
-    b->p1.text = (props_mode&DOMAIN_TIME) ? "ON" : "OFF";
-    return;
-  }
-  props_mode ^= DOMAIN_TIME;
-  select_lever_mode(LM_MARKER);
-  request_to_redraw(REDRAW_FREQUENCY | REDRAW_AREA);
-}
-
-static UI_FUNCTION_ADV_CALLBACK(menu_transform_filter_acb) {
-  if(b) {
-    b->icon = (props_mode & TD_FUNC) == data ? BUTTON_ICON_GROUP_CHECKED : BUTTON_ICON_GROUP;
-    return;
-  }
-  props_mode = (props_mode & ~TD_FUNC) | data;
-}
 
 const menuitem_t menu_bandwidth[];
 static UI_FUNCTION_ADV_CALLBACK(menu_bandwidth_sel_acb) {
@@ -2020,50 +1960,6 @@ static const menuitem_t menu_calop[] = {
   { MT_NEXT,     0, NULL, menu_back } // next-> menu_back
 };
 
-const menuitem_t menu_save[] = {
-#ifdef __SD_FILE_BROWSER__
-  { MT_CALLBACK, FMT_CAL_FILE, "SAVE TO\n SD CARD", menu_sdcard_cb },
-#endif
-  { MT_ADV_CALLBACK, 0, "Empty %d", menu_save_acb },
-  { MT_ADV_CALLBACK, 1, "Empty %d", menu_save_acb },
-  { MT_ADV_CALLBACK, 2, "Empty %d", menu_save_acb },
-#if SAVEAREA_MAX > 3
-  { MT_ADV_CALLBACK, 3, "Empty %d", menu_save_acb },
-#endif
-#if SAVEAREA_MAX > 4
-  { MT_ADV_CALLBACK, 4, "Empty %d", menu_save_acb },
-#endif
-#if SAVEAREA_MAX > 5
-  { MT_ADV_CALLBACK, 5, "Empty %d", menu_save_acb },
-#endif
-#if SAVEAREA_MAX > 6
-  { MT_ADV_CALLBACK, 6, "Empty %d", menu_save_acb },
-#endif
-  { MT_NEXT, 0, NULL, menu_back } // next-> menu_back
-};
-
-const menuitem_t menu_recall[] = {
-#ifdef __SD_FILE_BROWSER__
-  { MT_CALLBACK, FMT_CAL_FILE, "LOAD FROM\n SD CARD", menu_sdcard_browse_cb },
-#endif
-  { MT_ADV_CALLBACK, 0, "Empty %d", menu_recall_acb },
-  { MT_ADV_CALLBACK, 1, "Empty %d", menu_recall_acb },
-  { MT_ADV_CALLBACK, 2, "Empty %d", menu_recall_acb },
-#if SAVEAREA_MAX > 3
-  { MT_ADV_CALLBACK, 3, "Empty %d", menu_recall_acb },
-#endif
-#if SAVEAREA_MAX > 4
-  { MT_ADV_CALLBACK, 4, "Empty %d", menu_recall_acb },
-#endif
-#if SAVEAREA_MAX > 5
-  { MT_ADV_CALLBACK, 5, "Empty %d", menu_recall_acb },
-#endif
-#if SAVEAREA_MAX > 6
-  { MT_ADV_CALLBACK, 6, "Empty %d", menu_recall_acb },
-#endif
-  { MT_NEXT, 0, NULL, menu_back } // next-> menu_back
-};
-
 const menuitem_t menu_power[] = {
   { MT_ADV_CALLBACK, SI5351_CLK_DRIVE_STRENGTH_AUTO, "AUTO",  menu_power_acb },
   { MT_ADV_CALLBACK, SI5351_CLK_DRIVE_STRENGTH_2MA, "%u m" S_AMPER, menu_power_acb },
@@ -2099,54 +1995,6 @@ const menuitem_t menu_trace[] = {
   { MT_NEXT, 0, NULL, menu_back } // next-> menu_back
 };
 
-const menuitem_t menu_format4[] = {
-  { MT_ADV_CALLBACK, F_S21|TRC_Rser,   "SERIES R",   menu_format_acb },
-  { MT_ADV_CALLBACK, F_S21|TRC_Xser,   "SERIES X",   menu_format_acb },
-  { MT_ADV_CALLBACK, F_S21|TRC_Zser,   "SERIES |Z|", menu_format_acb },
-  { MT_ADV_CALLBACK, F_S21|TRC_Rsh,    "SHUNT R",    menu_format_acb },
-  { MT_ADV_CALLBACK, F_S21|TRC_Xsh,    "SHUNT X",    menu_format_acb },
-  { MT_ADV_CALLBACK, F_S21|TRC_Zsh,    "SHUNT |Z|",  menu_format_acb },
-  { MT_ADV_CALLBACK, F_S21|TRC_Qs21,   "Q FACTOR",   menu_format_acb },
-  { MT_NEXT, 0, NULL, menu_back } // next-> menu_back
-};
-
-const menuitem_t menu_formatS21[] = {
-  { MT_ADV_CALLBACK, F_S21|TRC_LOGMAG, "LOGMAG",      menu_format_acb },
-  { MT_ADV_CALLBACK, F_S21|TRC_PHASE,  "PHASE",       menu_format_acb },
-  { MT_ADV_CALLBACK, F_S21|TRC_DELAY,  "DELAY",       menu_format_acb },
-  { MT_ADV_CALLBACK, F_S21|TRC_SMITH,  "SMITH",       menu_format_acb },
-  { MT_ADV_CALLBACK, F_S21|TRC_POLAR,  "POLAR",       menu_format_acb },
-  { MT_ADV_CALLBACK, F_S21|TRC_LINEAR, "LINEAR",      menu_format_acb },
-  { MT_ADV_CALLBACK, F_S21|TRC_REAL,   "REAL",        menu_format_acb },
-  { MT_ADV_CALLBACK, F_S21|TRC_IMAG,   "IMAG",        menu_format_acb },
-  { MT_SUBMENU,          0, S_RARROW " MORE",     menu_format4 },
-  { MT_NEXT, 0, NULL, menu_back } // next-> menu_back
-};
-
-const menuitem_t menu_format3[] = {
-  { MT_ADV_CALLBACK, F_S11|TRC_ZPHASE, "Z PHASE",    menu_format_acb },
-  { MT_ADV_CALLBACK, F_S11|TRC_Cs,     "SERIES C",   menu_format_acb },
-  { MT_ADV_CALLBACK, F_S11|TRC_Ls,     "SERIES L",   menu_format_acb },
-  { MT_ADV_CALLBACK, F_S11|TRC_Rp,     "PARALLEL R", menu_format_acb },
-  { MT_ADV_CALLBACK, F_S11|TRC_Xp,     "PARALLEL X", menu_format_acb },
-  { MT_ADV_CALLBACK, F_S11|TRC_Cp,     "PARALLEL C", menu_format_acb },
-  { MT_ADV_CALLBACK, F_S11|TRC_Lp,     "PARALLEL L", menu_format_acb },
-  { MT_NEXT, 0, NULL, menu_back } // next-> menu_back
-};
-
-const menuitem_t menu_format2[] = {
-  { MT_ADV_CALLBACK, F_S11|TRC_POLAR,  "POLAR",       menu_format_acb },
-  { MT_ADV_CALLBACK, F_S11|TRC_LINEAR, "LINEAR",      menu_format_acb },
-  { MT_ADV_CALLBACK, F_S11|TRC_REAL,   "REAL",        menu_format_acb },
-  { MT_ADV_CALLBACK, F_S11|TRC_IMAG,   "IMAG",        menu_format_acb },
-  { MT_ADV_CALLBACK, F_S11|TRC_Q,      "Q FACTOR",    menu_format_acb },
-  { MT_ADV_CALLBACK, F_S11|TRC_G,      "CONDUCTANCE", menu_format_acb },
-  { MT_ADV_CALLBACK, F_S11|TRC_B,      "SUSCEPTANCE", menu_format_acb },
-  { MT_ADV_CALLBACK, F_S11|TRC_Y,      "|Y|",         menu_format_acb },
-  { MT_SUBMENU,         0, S_RARROW " MORE",     menu_format3 },
-  { MT_NEXT, 0, NULL, menu_back } // next-> menu_back
-};
-
 // NanoAnalyzer: antenna-match readouts only
 const menuitem_t menu_formatS11[] = {
   { MT_ADV_CALLBACK, F_S11|TRC_SWR,    "SWR",          menu_format_acb },
@@ -2167,16 +2015,6 @@ const menuitem_t menu_scale[] = {
   { MT_ADV_CALLBACK, VNA_MODE_SHOW_GRID, "SHOW GRID\nVALUES", menu_vna_mode_acb },
   { MT_ADV_CALLBACK, VNA_MODE_DOT_GRID , "DOT GRID",          menu_vna_mode_acb },
 #endif
-  { MT_NEXT, 0, NULL, menu_back } // next-> menu_back
-};
-
-const menuitem_t menu_transform[] = {
-  { MT_ADV_CALLBACK, 0,                       "TRANSFORM\n%s",      menu_transform_acb },
-  { MT_ADV_CALLBACK, TD_FUNC_LOWPASS_IMPULSE, "LOW PASS\nIMPULSE",  menu_transform_filter_acb },
-  { MT_ADV_CALLBACK, TD_FUNC_LOWPASS_STEP,    "LOW PASS\nSTEP",     menu_transform_filter_acb },
-  { MT_ADV_CALLBACK, TD_FUNC_BANDPASS,        "BANDPASS",           menu_transform_filter_acb },
-  { MT_ADV_CALLBACK, 0,                       "WINDOW\n " R_LINK_COLOR "%s", menu_transform_window_acb },
-  { MT_ADV_CALLBACK, KM_VELOCITY_FACTOR,      "VELOCITY F.\n " R_LINK_COLOR "%d%%%%", menu_keyboard_acb },
   { MT_NEXT, 0, NULL, menu_back } // next-> menu_back
 };
 
