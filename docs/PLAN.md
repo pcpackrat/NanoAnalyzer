@@ -259,9 +259,42 @@ shrinks (plot_h) in GRAPH+DATA / DATA layouts, readout rendered in-cell below it
 - Regression: `sweep`, `scan`, `cal`, `frequencies` serial commands still work
   (console kept for scripted checks).
 
-## Open decisions (not blocking Phase 0)
+## Future: NanoVNA-H / original NanoVNA (STM32F072) build
 
-- Include 33 cm / 23 cm amateur bands? (H4 harmonic mode weak > ~300 MHz.)
-- Firmware tree at repo root vs `firmware/` subdir.
+Deferred, not scoped. The F072 build infrastructure is kept in place — the
+Makefile `TARGET` switch, `NANOVNA_STM32_F072/` board dir, and the F072/F303
+`#if defined(NANOVNA_F303)` blocks in `nanovna.h` (320x240 vs 480x320 screen,
+smaller `SWEEP_POINTS_MAX`, single font). `TARGET=F303 make` is the default and
+the only build currently produced. `TARGET=F072 make` **does not link yet.**
+
+What a working F072 port needs:
+
+1. **RAM.** F072 has 20 KB vs F303's 40 KB. Current `.bss` ≈ 40 KB — `measured[2]
+   [SWEEP_POINTS_MAX][2]` dominates. F072's `SWEEP_POINTS_MAX` is already smaller
+   in `nanovna.h`; confirm the whole image fits. May need to drop points further
+   or trim buffers. This is the hard blocker (~150 bytes over last time it was
+   tried).
+2. **Display layout.** Everything NanoAnalyzer added to `plot.c` is sized for
+   480x320: `PLOT_H_DATA` / `PLOT_H_GRAPH_DATA`, `cell_draw_readout`,
+   `cell_str_scale`, `cell_draw_bignum`, the range-line x-anchors
+   (`FREQUENCIES_XPOS*`). Need a 320x240 set of constants / a compact readout
+   variant, conditionalised on `LCD_WIDTH`.
+3. **Fonts.** F072 has one small font and no `_USE_FONT_ != _USE_SMALL_FONT_`
+   path; `cell_str_scale` (scaled normal font) and the big `numfont16x22` readout
+   need to work with whatever the F072 build has, or be scaled differently.
+4. **Menus / band presets.** Menu button count vs the smaller screen; the CUSTOM
+   band group (12 items) and readout strip may not fit the same way.
+5. **Flash pages.** `SAVE_BANDS`/`SAVE_STATE` pages are added below the properties
+   area — check they fit F072's 128 KB layout in `hardware.h` (F072 branch uses
+   `SAVEAREA_MAX 5`, `SAVE_PROP_CONFIG_SIZE 0x1800`).
+
+Test targets: **NanoVNA-H** (H, F072, 320x240) and the **original NanoVNA**
+(gen-1, F072). Both flash via `dfu-util -d 0483:df11 ... -D build/H.bin`.
+Do this once there is an H on the bench and testers who need it.
+
+## Open decisions (not blocking)
+
 - Signed R (drop `vna_fabsf` in `resistance()`) — yes/no.
-- VM→GitHub auth: SSH deploy key (recommended) vs HTTPS PAT.
+- `docs/PLAN.md` kept in the repo or moved out before testers get access.
+- Auto-save config after TOUCH CAL so `SAVE CONFIG` can be removed.
+- Trim `CONFIG → EXPERT SETTINGS`.
