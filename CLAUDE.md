@@ -17,3 +17,17 @@ You are a highly efficient Senior Developer/Analyst. Your goal is to deliver cle
 
 # Output Formatting
 - Prefer code blocks over paragraph descriptions.
+
+# Project: NanoAnalyzer (NanoVNA-H4 antenna analyzer firmware)
+- Fork of DiSlord NanoVNA-D (see UPSTREAM.md). Target: F303 / H4 only.
+- Plan of record: docs/PLAN.md. Pristine upstream for diffing: reference/NanoVNA-D/ (git-ignored).
+
+## Build / flash loop
+- Builds run on the Debian VM, not Windows. SSH alias: `nanovm` (devuser@10.10.10.53).
+- After any firmware change:
+  1. Commit + push from Windows.
+  2. `ssh nanovm 'cd ~/src/NanoAnalyzer && git pull --ff-only && TARGET=F303 make 2>&1 | tail -30'`
+  3. On error: fix, retry once.
+  4. On success, from the VM: copy `build/H4.bin` -> `bin/H4.bin` (+ `bin/archive/H4-<date>-<sha>.bin`), commit "build: <sha>", push.
+  5. `git pull` on Windows.
+- Do NOT flash. The user flashes `bin/H4.bin` from Windows (STM32CubeProgrammer, H4 in DFU via jog switch on power-up). Do not open the device serial console.

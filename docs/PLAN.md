@@ -204,10 +204,13 @@ New `#define __REFLECTION_ONLY__`:
 
 ## Phasing (build stays green after every phase)
 
-0. Repo `git init` + remote `pcpackrat/NanoAnalyzer` + source copy + `.gitignore`
-   + `UPSTREAM.md` + `docs/PLAN.md`; Debian VM toolchain install; VM→GitHub push
-   auth; Windows flashing tool (STM32CubeProgrammer); build **stock** `H4.bin` on
-   the VM, commit to `bin/`, flash it from Windows to prove the full loop.
+0. **[DONE]** Repo `git init` + remote `pcpackrat/NanoAnalyzer` + source copy +
+   `.gitignore` + `UPSTREAM.md` + `docs/PLAN.md` + `CLAUDE.md` build section.
+   Debian VM (`nanovm` = devuser@10.10.10.53): ARM toolchain already present
+   (gcc 14.2, newlib 4.5, binutils 2.44); repo at `~/src/NanoAnalyzer`; deploy
+   key `nanoanalyzer_deploy` pushes to GitHub. Stock `H4.bin` built (text 90 KB,
+   bss 40 KB) and committed to `bin/` (commit `7d5d831`). **Pending: user flashes
+   `bin/H4.bin` to confirm the loop end-to-end.**
 1. Strip: disable feature flags, delete dead menus, `__REFLECTION_ONLY__`,
    `def_trace` → SWR/R/X/|Z|, trim S11 format menu. Build; user flashes; confirm
    basic S11 sweep + SWR trace on the H4.
