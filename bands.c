@@ -39,9 +39,9 @@ static const band_preset_t default_bands[BANDS_MAX] = {
   { "MURS",     153210000,    2900000 },   // 151.820 - 154.600
   { "CB",        27185000,     450000 },   // 26.965 - 27.405 (edit wider for freeband)
   // ---- CUSTOM: wide-range scans, then empty user slots ----
-  { "1.7-54M",   27850000,   52300000 },   // HF through 6 m
-  { "118-160M", 139000000,   42000000 },   // air band through 2 m
-  { "420-470M", 445000000,   50000000 },   // 70 cm through GMRS
+  { "1.7-54 M",   27850000,   52300000 },   // HF through 6 m
+  { "118-160 M", 139000000,   42000000 },   // air band through 2 m
+  { "420-470 M", 445000000,   50000000 },   // 70 cm through GMRS
   // indices 22..27 left empty for user presets
 };
 
