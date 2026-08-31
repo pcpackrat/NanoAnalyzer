@@ -233,8 +233,14 @@ New `#define __REFLECTION_ONLY__`:
    GRAPH / GRAPH+DATA / DATA. `draw_readout()` in plot.c overlays SWR/R/X/|Z| at
    the marker. Default props: TD_MARKER_TRACK + search MIN -> marker parks on the
    SWR dip each sweep. CONFIG_MAGIC / PROPERTIES_MAGIC bumped ("NAN0"/"NANA").
-6. Cal UX simplification + CAL SPAN shortcut. Full wideband SOL, then walk every
-   band preset.
+6. **[DONE]** CALIBRATE -> OPEN/SHORT/LOAD/DONE; DONE auto-saves slot 0. menu_cal
+   = WIDE SPAN (1-600 MHz) / CALIBRATE / APPLY / RESET / POWER. Verify: one
+   wideband SOL, then walk every band preset against a known load + antenna.
+
+Phase 5 note: the readout went through many iterations (5a-5g). Final: graph
+shrinks (plot_h) in GRAPH+DATA / DATA layouts, readout rendered in-cell below it
+(cell_draw_readout, cell_str_scale, cell_draw_bignum). Marker slot 7 = dedicated
+"S" SWR-min tracker (marker_track); user markers 1-4 restored to stock.
 7. Branding: strings, splash, version; final size check; update `CLAUDE.md` build
    line.
 
