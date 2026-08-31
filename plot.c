@@ -30,8 +30,8 @@ static uint16_t area_width  = AREA_WIDTH_NORMAL;
 static uint16_t area_height = AREA_HEIGHT_NORMAL;
 
 // NanoAnalyzer: the graph shrinks in the data layouts to leave a readout strip below it
-#define PLOT_H_DATA        152
-#define PLOT_H_GRAPH_DATA  228
+#define PLOT_H_DATA        176
+#define PLOT_H_GRAPH_DATA  256
 static inline int plot_h(void) {
   return display_mode == DISPLAY_DATA       ? PLOT_H_DATA :
          display_mode == DISPLAY_GRAPH_DATA ? PLOT_H_GRAPH_DATA : HEIGHT;
@@ -1378,6 +1378,50 @@ static void cell_draw_marker_info(int x0, int y0) {
 #endif
 }
 
+//**************************************************************************************
+//   NanoAnalyzer SWR / R / X / |Z| readout, rendered in-cell below the shrunk graph
+//   (display_mode DISPLAY_GRAPH_DATA and DISPLAY_DATA). Called from draw_cell() so it
+//   composites with the cell buffer - no flicker, and the cell system clears it.
+//**************************************************************************************
+static void cell_draw_bignum(int x, int y, const char *s) {
+  for (; *s; s++) {
+    uint8_t g = (*s == '.') ? KP_PERIOD : (*s >= '0' && *s <= '9') ? (uint8_t)(*s - '0') : KP_MINUS;
+    cell_blit_bitmap(x, y, NUM_FONT_GET_WIDTH, NUM_FONT_GET_HEIGHT, NUM_FONT_GET_DATA(g));
+    x += (*s == '.') ? NUM_FONT_GET_WIDTH / 2 + 2 : NUM_FONT_GET_WIDTH + 2;
+  }
+}
+
+static void cell_draw_readout(int x0, int y0) {
+  if (display_mode == DISPLAY_GRAPH) return;
+  const int xb = OFFSETX + 2;
+  const int yb = plot_h() + 3;
+  const int lh = FONT_STR_HEIGHT + 2;
+  lcd_set_foreground(LCD_FG_COLOR);
+
+  if (active_marker == MARKER_INVALID) { cell_printf(xb - x0, yb - y0, "no marker"); return; }
+  int idx = markers[active_marker].index;
+  if (idx < 0) idx = 0; else if (idx >= sweep_points) idx = sweep_points - 1;
+  const float *v = measured[0][idx];
+  float s = swr(idx, v);
+  int r = (int)resistance(idx, v), x = (int)reactance(idx, v), z = (int)mod_z(idx, v);
+  char sbuf[10];
+  if (vna_isinff(s)) strcpy(sbuf, "10+"); else plot_printf(sbuf, sizeof sbuf, "%.2f", s);
+  freq_t mf = get_marker_frequency(active_marker) + 500;
+  unsigned mhz = mf / 1000000, khz = (mf / 1000) % 1000;
+  const char *tag = (props_mode & TD_MARKER_TRACK) ? "SWR MIN" : "MARKER";
+
+  if (display_mode == DISPLAY_GRAPH_DATA) {
+    cell_printf(xb - x0, yb - y0,      "%s  %u.%03uMHz   SWR %s", tag, mhz, khz, sbuf);
+    cell_printf(xb - x0, yb + lh - y0, "R %d   X %+d   |Z| %d " S_OHM, r, x, z);
+  } else { // DISPLAY_DATA
+    cell_printf(xb - x0, yb - y0,      "%s   %u.%03u MHz", tag, mhz, khz);
+    int yn = yb + lh + 2;
+    cell_printf(xb - x0, yn + (NUM_FONT_GET_HEIGHT - FONT_STR_HEIGHT) / 2 - y0, "SWR");
+    cell_draw_bignum(xb + 5 * FONT_WIDTH - x0, yn - y0, sbuf);
+    cell_printf(xb - x0, yn + NUM_FONT_GET_HEIGHT + 4 - y0, "R %d   X %+d   |Z| %d " S_OHM, r, x, z);
+  }
+}
+
 static void draw_cell(int x0, int y0) {
   int w = CELLWIDTH;
   int h = CELLHEIGHT;
@@ -1532,6 +1576,9 @@ static void draw_cell(int x0, int y0) {
     cell_draw_marker_info(x0, y0);
 #endif
 
+  // NanoAnalyzer readout strip below the graph
+  cell_draw_readout(x0, y0);
+
   // Measure data output
 #ifdef __VNA_MEASURE_MODULE__
   cell_draw_measure(x0, y0);
@@ -1556,8 +1603,6 @@ static void draw_cell(int x0, int y0) {
 
 void set_area_size(uint16_t w, uint16_t h) {
   area_width  = w;
-  // NanoAnalyzer: keep the graph cells above the readout strip in the data layouts
-  if (h && (int)h > plot_h()) h = plot_h();
   area_height = h;
 }
 
@@ -1742,46 +1787,6 @@ static void draw_battery_status(void) {
 }
 
 //**************************************************************************************
-//            NanoAnalyzer SWR / R / X / |Z| readout overlay (display_mode 1 and 2)
-//**************************************************************************************
-static void draw_readout(void) {
-  if (display_mode == DISPLAY_GRAPH) return;
-
-  int y0 = plot_h() + 3;
-  int x0 = OFFSETX + 2;
-  char buf[40], sbuf[12], fbuf[16];
-  lcd_set_colors(LCD_FG_COLOR, LCD_BG_COLOR);
-
-  if (active_marker == MARKER_INVALID) {
-    lcd_drawstring_size("no marker", x0, y0, 2);
-    return;
-  }
-  int idx = markers[active_marker].index;
-  if (idx < 0) idx = 0; else if (idx >= sweep_points) idx = sweep_points - 1;
-  const float *v = measured[0][idx];
-  float s = swr(idx, v);
-  int r = (int)resistance(idx, v), x = (int)reactance(idx, v), z = (int)mod_z(idx, v);
-  if (vna_isinff(s)) strcpy(sbuf, ">10   "); else plot_printf(sbuf, sizeof sbuf, "%.2f  ", s);
-  freq_t mf = get_marker_frequency(active_marker) + 500;
-  plot_printf(fbuf, sizeof fbuf, "%u.%03uMHz", mf / 1000000, (mf / 1000) % 1000);
-  const char *tag = (props_mode & TD_MARKER_TRACK) ? "SWR MIN" : "MARKER";
-
-  if (display_mode == DISPLAY_GRAPH_DATA) {
-    plot_printf(buf, sizeof buf, "%s  %s   SWR %s   ", tag, fbuf, sbuf);
-    lcd_drawstring_size(buf, x0, y0, 2);
-    plot_printf(buf, sizeof buf, "R %d   X %+d   |Z| %d " S_OHM "     ", r, x, z);
-    lcd_drawstring_size(buf, x0, y0 + 2 * FONT_GET_HEIGHT + 4, 2);
-  } else { // DISPLAY_DATA
-    plot_printf(buf, sizeof buf, "%s  %s     ", tag, fbuf);
-    lcd_drawstring_size(buf, x0, y0, 2);
-    lcd_drawstring_size("SWR", x0, y0 + 2 * FONT_GET_HEIGHT + 4, 2);
-    lcd_drawstring_size(sbuf, x0, y0 + 4 * FONT_GET_HEIGHT + 6, 5);
-    plot_printf(buf, sizeof buf, "R %d   X %+d   |Z| %d " S_OHM "     ", r, x, z);
-    lcd_drawstring_size(buf, x0, y0 + 4 * FONT_GET_HEIGHT + 6 + 5 * FONT_GET_HEIGHT + 6, 2);
-  }
-}
-
-//**************************************************************************************
 //            Draw all request
 //**************************************************************************************
 void draw_all(void) {
@@ -1804,10 +1809,8 @@ void draw_all(void) {
     if (redraw_request & REDRAW_GRID_VALUE) markmap_grid_values();
 #endif
   }
-  if (redraw_request & (REDRAW_CELLS | REDRAW_MARKER | REDRAW_GRID_VALUE | REDRAW_REFERENCE | REDRAW_AREA)) {
+  if (redraw_request & (REDRAW_CELLS | REDRAW_MARKER | REDRAW_GRID_VALUE | REDRAW_REFERENCE | REDRAW_AREA))
     draw_all_cells();
-    draw_readout();   // NanoAnalyzer overlay (no-op in DISPLAY_GRAPH)
-  }
   if (redraw_request & REDRAW_FREQUENCY)
     draw_frequencies();
   if (redraw_request & REDRAW_CAL_STATUS)
