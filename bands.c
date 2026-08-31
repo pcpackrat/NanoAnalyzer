@@ -12,9 +12,9 @@
 // so the SWR dip is always on screen. Names <= BAND_NAME_LEN-1 chars.
 // Grouping used by the BANDS menu:
 //   HF        : index 0..9
-//   VHF/UHF   : index 10..13
-//   SERVICE   : index 14..16
-//   CUSTOM    : index 17..27 (3 wide-range presets + 8 empty user slots)
+//   VHF/UHF   : index 10..15
+//   SERVICE   : index 16..18
+//   CUSTOM    : index 19..27 (3 wide-range presets + 6 empty user slots)
 static const band_preset_t default_bands[BANDS_MAX] = {
   // ---- HF amateur ----
   { "160m",       1900000,     200000 },   // 1.800 - 2.000
@@ -32,6 +32,8 @@ static const band_preset_t default_bands[BANDS_MAX] = {
   { "2m",       146000000,    4000000 },   // 144.000 - 148.000
   { "1.25m",    223500000,    3000000 },   // 222.000 - 225.000
   { "70cm",     435000000,   30000000 },   // 420.000 - 450.000
+  { "33cm",     915000000,   26000000 },   // 902 - 928 (H4 accuracy poor this high)
+  { "23cm",    1270000000,   60000000 },   // 1240 - 1300 (near H4 upper limit)
   // ---- Licensed / unlicensed services ----
   { "GMRS/FRS", 465137500,    5175000 },   // 462.5500 - 467.7250
   { "MURS",     153210000,    2900000 },   // 151.820 - 154.600
@@ -40,7 +42,7 @@ static const band_preset_t default_bands[BANDS_MAX] = {
   { "1.7-54M",   27850000,   52300000 },   // HF through 6 m
   { "118-160M", 139000000,   42000000 },   // air band through 2 m
   { "420-470M", 445000000,   50000000 },   // 70 cm through GMRS
-  // indices 20..27 left empty for user presets
+  // indices 22..27 left empty for user presets
 };
 
 band_preset_t bands[BANDS_MAX];

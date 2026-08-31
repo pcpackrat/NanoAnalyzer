@@ -2294,19 +2294,19 @@ static const menuitem_t menu_bands_vu[] = {
   { MT_ADV_CALLBACK, 11, "%s", menu_band_acb },
   { MT_ADV_CALLBACK, 12, "%s", menu_band_acb },
   { MT_ADV_CALLBACK, 13, "%s", menu_band_acb },
+  { MT_ADV_CALLBACK, 14, "%s", menu_band_acb },
+  { MT_ADV_CALLBACK, 15, "%s", menu_band_acb },
   { MT_NEXT, 0, NULL, menu_back } // next-> menu_back
 };
 
 static const menuitem_t menu_bands_svc[] = {
-  { MT_ADV_CALLBACK, 14, "%s", menu_band_acb },
-  { MT_ADV_CALLBACK, 15, "%s", menu_band_acb },
   { MT_ADV_CALLBACK, 16, "%s", menu_band_acb },
+  { MT_ADV_CALLBACK, 17, "%s", menu_band_acb },
+  { MT_ADV_CALLBACK, 18, "%s", menu_band_acb },
   { MT_NEXT, 0, NULL, menu_back } // next-> menu_back
 };
 
 static const menuitem_t menu_bands_custom[] = {
-  { MT_ADV_CALLBACK, 17, "%s", menu_band_acb },
-  { MT_ADV_CALLBACK, 18, "%s", menu_band_acb },
   { MT_ADV_CALLBACK, 19, "%s", menu_band_acb },
   { MT_ADV_CALLBACK, 20, "%s", menu_band_acb },
   { MT_ADV_CALLBACK, 21, "%s", menu_band_acb },
