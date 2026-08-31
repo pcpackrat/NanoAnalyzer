@@ -1,0 +1,20 @@
+# Build output (raw Makefile tree). Released binaries live in bin/ and ARE committed.
+build/
+.dep/
+*.o
+*.elf
+*.map
+*.lst
+*.hex
+*.list
+*.dmp
+*.stackdump
+
+# Pristine upstream baseline, kept locally for diffing only
+reference/
+
+# Editor / OS
+*~
+.DS_Store
+TAGS
+.emacs-dirvars
