@@ -1625,9 +1625,14 @@ static void draw_frequencies(void) {
     lcd_printf(FREQUENCIES_XPOS1, FREQUENCIES_YPOS, "START 0" S_SECOND "    VF = %d%%", velocity_factor);
     lcd_printf(FREQUENCIES_XPOS2, FREQUENCIES_YPOS, "STOP %F" S_SECOND " (%F" S_METRE ")", time_of_index(sweep_points-1), distance_of_index(sweep_points-1));
   }
-  // Draw bandwidth and point count
+  // Center slot: in center/bandwidth mode show the resulting sweep edges,
+  // otherwise the IF bandwidth and point count.
   lcd_set_foreground(LCD_BW_TEXT_COLOR);
-  lcd_printf(FREQUENCIES_XPOS3, FREQUENCIES_YPOS,"BW:%u" S_Hz " %up", get_bandwidth_frequency(config._bandwidth), sweep_points);
+  if ((props_mode & DOMAIN_MODE) == DOMAIN_FREQ && FREQ_IS_CENTERSPAN() && !FREQ_IS_CW())
+    lcd_printf(FREQUENCIES_XPOS3, FREQUENCIES_YPOS, "%.4f" S_RARROW "%.4f MHz",
+               get_sweep_frequency(ST_START) / 1e6, get_sweep_frequency(ST_STOP) / 1e6);
+  else
+    lcd_printf(FREQUENCIES_XPOS3, FREQUENCIES_YPOS,"BW:%u" S_Hz " %up", get_bandwidth_frequency(config._bandwidth), sweep_points);
   lcd_set_font(FONT_NORMAL);
 }
 
