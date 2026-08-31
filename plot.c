@@ -30,8 +30,8 @@ static uint16_t area_width  = AREA_WIDTH_NORMAL;
 static uint16_t area_height = AREA_HEIGHT_NORMAL;
 
 // NanoAnalyzer: the graph shrinks in the data layouts to leave a readout strip below it
-#define PLOT_H_DATA        176
-#define PLOT_H_GRAPH_DATA  256
+#define PLOT_H_DATA        150
+#define PLOT_H_GRAPH_DATA  208
 static inline int plot_h(void) {
   return display_mode == DISPLAY_DATA       ? PLOT_H_DATA :
          display_mode == DISPLAY_GRAPH_DATA ? PLOT_H_GRAPH_DATA : HEIGHT;
@@ -984,6 +984,24 @@ void marker_search(void) {
   set_marker_index(active_marker, found);
 }
 
+// NanoAnalyzer: track the marker to the true min/max of the trace value (not the
+// on-screen pixel, so it is immune to graph scaling / clamping in the data layouts)
+static void marker_track(void) {
+  if (current_trace == TRACE_INVALID || active_marker == MARKER_INVALID) return;
+  get_value_cb_t cb = trace_info_list[trace[current_trace].type].get_value_cb;
+  if (!cb) return;
+  float (*arr)[2] = measured[trace[current_trace].channel];
+  const bool findmin = VNA_MODE(VNA_MODE_SEARCH) != 0;
+  int found = 0;
+  float best = cb(0, arr[0]);
+  for (int i = 1; i < sweep_points; i++) {
+    float v = cb(i, arr[i]);
+    if (vna_isinff(v)) continue;
+    if (vna_isinff(best) || (findmin ? v < best : v > best)) { best = v; found = i; }
+  }
+  set_marker_index(active_marker, found);
+}
+
 void marker_search_dir(int16_t from, int16_t dir) {
   int i, value;
   int found = -1;
@@ -1204,7 +1222,7 @@ static void plot_into_index(void) {
 //  STOP_PROFILE;
   // Marker track on data update
   if (props_mode & TD_MARKER_TRACK)
-    marker_search();
+    marker_track();
 #ifdef __VNA_MEASURE_MODULE__
   // Current scan update
   measure_set_flag(MEASURE_UPD_SWEEP);
@@ -1383,19 +1401,38 @@ static void cell_draw_marker_info(int x0, int y0) {
 //   (display_mode DISPLAY_GRAPH_DATA and DISPLAY_DATA). Called from draw_cell() so it
 //   composites with the cell buffer - no flicker, and the cell system clears it.
 //**************************************************************************************
-static void cell_draw_bignum(int x, int y, const char *s) {
+static void cell_blit_num(int x, int y, uint8_t ch, int sc) {
+  const uint8_t *b = NUM_FONT_GET_DATA(ch);
+  for (int row = 0; row < NUM_FONT_GET_HEIGHT; row++) {
+    uint16_t bits = (b[row * 2] << 8) | b[row * 2 + 1];
+    for (int col = 0; col < NUM_FONT_GET_WIDTH; col++, bits <<= 1) {
+      if (!(bits & 0x8000)) continue;
+      for (int dy = 0; dy < sc; dy++) {
+        int py = y + row * sc + dy;
+        if ((unsigned)py >= CELLHEIGHT) continue;
+        for (int dx = 0; dx < sc; dx++) {
+          int px = x + col * sc + dx;
+          if ((unsigned)px < CELLWIDTH) cell_buffer[py * CELLWIDTH + px] = foreground_color;
+        }
+      }
+    }
+  }
+}
+
+static int cell_draw_bignum(int x, int y, const char *s, int sc) {
   for (; *s; s++) {
     uint8_t g = (*s == '.') ? KP_PERIOD : (*s >= '0' && *s <= '9') ? (uint8_t)(*s - '0') : KP_MINUS;
-    cell_blit_bitmap(x, y, NUM_FONT_GET_WIDTH, NUM_FONT_GET_HEIGHT, NUM_FONT_GET_DATA(g));
-    x += (*s == '.') ? NUM_FONT_GET_WIDTH / 2 + 2 : NUM_FONT_GET_WIDTH + 2;
+    cell_blit_num(x, y, g, sc);
+    x += (*s == '.' ? NUM_FONT_GET_WIDTH / 2 + 2 : NUM_FONT_GET_WIDTH + 2) * sc;
   }
+  return x;
 }
 
 static void cell_draw_readout(int x0, int y0) {
   if (display_mode == DISPLAY_GRAPH) return;
   const int xb = OFFSETX + 2;
-  const int yb = plot_h() + 3;
-  const int lh = FONT_STR_HEIGHT + 2;
+  const int yb = plot_h() + 4;
+  if (y0 + CELLHEIGHT <= yb || x0 >= 340) return;  // cell not in the readout region
   lcd_set_foreground(LCD_FG_COLOR);
 
   if (active_marker == MARKER_INVALID) { cell_printf(xb - x0, yb - y0, "no marker"); return; }
@@ -1410,16 +1447,12 @@ static void cell_draw_readout(int x0, int y0) {
   unsigned mhz = mf / 1000000, khz = (mf / 1000) % 1000;
   const char *tag = (props_mode & TD_MARKER_TRACK) ? "SWR MIN" : "MARKER";
 
-  if (display_mode == DISPLAY_GRAPH_DATA) {
-    cell_printf(xb - x0, yb - y0,      "%s  %u.%03uMHz   SWR %s", tag, mhz, khz, sbuf);
-    cell_printf(xb - x0, yb + lh - y0, "R %d   X %+d   |Z| %d " S_OHM, r, x, z);
-  } else { // DISPLAY_DATA
-    cell_printf(xb - x0, yb - y0,      "%s   %u.%03u MHz", tag, mhz, khz);
-    int yn = yb + lh + 2;
-    cell_printf(xb - x0, yn + (NUM_FONT_GET_HEIGHT - FONT_STR_HEIGHT) / 2 - y0, "SWR");
-    cell_draw_bignum(xb + 5 * FONT_WIDTH - x0, yn - y0, sbuf);
-    cell_printf(xb - x0, yn + NUM_FONT_GET_HEIGHT + 4 - y0, "R %d   X %+d   |Z| %d " S_OHM, r, x, z);
-  }
+  const int sc = (display_mode == DISPLAY_DATA) ? 3 : 2;
+  cell_printf(xb - x0, yb - y0, "%s  %u.%03u MHz", tag, mhz, khz);
+  int yn = yb + FONT_STR_HEIGHT + 4;
+  cell_printf(xb - x0, yn + (NUM_FONT_GET_HEIGHT * sc - FONT_STR_HEIGHT) / 2 - y0, "SWR");
+  cell_draw_bignum(xb + 4 * FONT_WIDTH - x0, yn - y0, sbuf, sc);
+  cell_printf(xb - x0, yn + NUM_FONT_GET_HEIGHT * sc + 4 - y0, "R %d   X %+d   |Z| %d " S_OHM, r, x, z);
 }
 
 static void draw_cell(int x0, int y0) {
@@ -1485,9 +1518,11 @@ static void draw_cell(int x0, int y0) {
   // Draw rectangular plot
   if (trace_type & RECTANGULAR_GRID_MASK) {
     const int step = VNA_MODE(VNA_MODE_DOT_GRID) ? 2 : 1;
+    int vend = plot_h() - y0;                 // clip vertical grid lines to the graph area
+    if (vend > (int)h) vend = h; if (vend < 0) vend = 0;
     for (x = 0; x < w; x++) {
       if (rectangular_grid_x(x + x0)) {
-        for (y = 0; y < h*CELLWIDTH; y+=step*CELLWIDTH) cell_buffer[y + x] = c;
+        for (y = 0; y < vend*CELLWIDTH; y+=step*CELLWIDTH) cell_buffer[y + x] = c;
       }
     }
     for (y = 0; y < h; y++) {
