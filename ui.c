@@ -141,6 +141,7 @@ enum {
   KM_BIN_NAME,
 #endif
 #endif
+  KM_BAND_CENTER, KM_BAND_SPAN, KM_BAND_NAME, // NanoAnalyzer band preset edit
   KM_NONE
 };
 
@@ -809,20 +810,39 @@ static UI_FUNCTION_ADV_CALLBACK(menu_recall_acb) {
   load_properties(data);
 }
 
-// NanoAnalyzer: apply a band preset (center frequency + bandwidth) and return to the sweep
+// NanoAnalyzer band presets
+static uint8_t edit_band_idx;
+static const menuitem_t menu_band_edit[];
+
+static bool band_is_active(const band_preset_t *bp) {
+  return bp->name[0] && FREQ_IS_CENTERSPAN() &&
+         get_sweep_frequency(ST_CENTER) == bp->center &&
+         get_sweep_frequency(ST_SPAN)   == bp->span;
+}
+
+// Tap a band to apply it (center frequency + bandwidth) and return to the sweep.
+// Tap the already-active band again to edit it.
 static UI_FUNCTION_ADV_CALLBACK(menu_band_acb) {
   if (data >= BANDS_MAX) return;
   const band_preset_t *bp = &bands[data];
   if (b) {
     b->p1.text = bp->name;
-    if (bp->name[0] && FREQ_IS_CENTERSPAN() &&
-        get_sweep_frequency(ST_CENTER) == bp->center &&
-        get_sweep_frequency(ST_SPAN)   == bp->span)
-      b->icon = BUTTON_ICON_CHECK;
+    if (band_is_active(bp)) b->icon = BUTTON_ICON_CHECK;
+    return;
+  }
+  if (band_is_active(bp)) {
+    edit_band_idx = data;
+    menu_push_submenu(menu_band_edit);
     return;
   }
   band_apply(data);
   ui_mode_normal();
+}
+
+static UI_FUNCTION_CALLBACK(menu_bands_reset_cb) {
+  (void)data;
+  bands_reset_defaults();
+  menu_move_back(true);
 }
 
 enum {
@@ -2288,6 +2308,16 @@ const menuitem_t menu_bands[] = {
   { MT_NEXT, 0, NULL, menu_back } // next-> menu_back
 };
 
+// Edit the preset in edit_band_idx (opened by tapping the active band again).
+// Changes are applied to the live sweep and saved to flash immediately.
+static const menuitem_t menu_band_edit[] = {
+  { MT_ADV_CALLBACK, KM_BAND_CENTER, "CENTER FREQ",       menu_keyboard_acb },
+  { MT_ADV_CALLBACK, KM_BAND_SPAN,   "BANDWIDTH",         menu_keyboard_acb },
+  { MT_ADV_CALLBACK, KM_BAND_NAME,   "NAME",              menu_keyboard_acb },
+  { MT_CALLBACK,     0,              "RESET ALL\nPRESETS", menu_bands_reset_cb },
+  { MT_NEXT, 0, NULL, menu_back } // next-> menu_back
+};
+
 // NanoAnalyzer: sweep is defined by center frequency + bandwidth (== span)
 const menuitem_t menu_stimulus[] = {
   { MT_ADV_CALLBACK, KM_CENTER, "CENTER FREQ",   menu_keyboard_acb },
@@ -3038,6 +3068,33 @@ UI_KEYBOARD_CALLBACK(input_var_delay) {
   current_props._var_delay = keyboard_get_float();
 }
 
+// NanoAnalyzer: edit bands[edit_band_idx]. data 0 = center, 1 = bandwidth.
+UI_KEYBOARD_CALLBACK(input_band_freq) {
+  if (edit_band_idx >= BANDS_MAX) return;
+  band_preset_t *bp = &bands[edit_band_idx];
+  if (b) {
+    plot_printf(b->label, sizeof(b->label), "%s\n " R_LINK_COLOR "%.4q" S_Hz,
+                data ? "BANDWIDTH" : "CENTER FREQ", data ? bp->span : bp->center);
+    return;
+  }
+  freq_t f = keyboard_get_freq();
+  if (data) bp->span = f; else bp->center = f;
+  bands_save();
+  band_apply(edit_band_idx);   // reflect the change on the live sweep
+}
+
+UI_KEYBOARD_CALLBACK(input_band_name) {
+  (void)data;
+  if (b) return;
+  if (edit_band_idx >= BANDS_MAX) return;
+  band_preset_t *bp = &bands[edit_band_idx];
+  size_t n = strlen(kp_buf);
+  if (n >= BAND_NAME_LEN) n = BAND_NAME_LEN - 1;
+  memcpy(bp->name, kp_buf, n);
+  bp->name[n] = 0;
+  bands_save();
+}
+
 // Call back functions for MT_CALLBACK type
 UI_KEYBOARD_CALLBACK(input_points) {
   (void)data;
@@ -3262,6 +3319,9 @@ const keypads_list keypads_mode_tbl[KM_NONE] = {
 [KM_BIN_NAME]        = {KEYPAD_TEXT,   FMT_BIN_FILE,  "BIN",                input_filename }, // bin filename
 #endif
 #endif
+[KM_BAND_CENTER]     = {KEYPAD_FREQ,   0,             "BAND CENTER FREQ",   input_band_freq }, // band preset center
+[KM_BAND_SPAN]       = {KEYPAD_FREQ,   1,             "BAND BANDWIDTH",     input_band_freq }, // band preset bandwidth
+[KM_BAND_NAME]       = {KEYPAD_TEXT,   0,             "BAND NAME",          input_band_name }, // band preset name
 };
 
 // Keyboard callback function for UI button
