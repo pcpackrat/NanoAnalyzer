@@ -1519,7 +1519,8 @@ static void draw_cell(int x0, int y0) {
   if (trace_type & RECTANGULAR_GRID_MASK) {
     const int step = VNA_MODE(VNA_MODE_DOT_GRID) ? 2 : 1;
     int vend = plot_h() - y0;                 // clip vertical grid lines to the graph area
-    if (vend > (int)h) vend = h; if (vend < 0) vend = 0;
+    if (vend > (int)h) vend = h;
+    if (vend < 0) vend = 0;
     for (x = 0; x < w; x++) {
       if (rectangular_grid_x(x + x0)) {
         for (y = 0; y < vend*CELLWIDTH; y+=step*CELLWIDTH) cell_buffer[y + x] = c;
