@@ -229,7 +229,10 @@ New `#define __REFLECTION_ONLY__`:
 4. **[DONE]** EDIT PRESETS: tap the active band again -> edit menu (CENTER FREQ /
    BANDWIDTH / NAME keypads + RESET ALL PRESETS). Edits apply to the live sweep
    and `bands_save()` to flash immediately. KM_BAND_CENTER/SPAN/NAME keypad modes.
-5. Display layouts + auto-marker-to-min. Confirm all 3 modes.
+5. **[DONE]** `display_mode` (config._reserved[0]) + DISPLAY -> LAYOUT cycling
+   GRAPH / GRAPH+DATA / DATA. `draw_readout()` in plot.c overlays SWR/R/X/|Z| at
+   the marker. Default props: TD_MARKER_TRACK + search MIN -> marker parks on the
+   SWR dip each sweep. CONFIG_MAGIC / PROPERTIES_MAGIC bumped ("NAN0"/"NANA").
 6. Cal UX simplification + CAL SPAN shortcut. Full wideband SOL, then walk every
    band preset.
 7. Branding: strings, splash, version; final size check; update `CLAUDE.md` build
