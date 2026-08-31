@@ -1618,9 +1618,10 @@ static void draw_frequencies(void) {
       lcd_printf(FREQUENCIES_XPOS1, FREQUENCIES_YPOS, "%c%s %15q" S_Hz, lm0, "START", get_sweep_frequency(ST_START));
       lcd_printf(FREQUENCIES_XPOS2, FREQUENCIES_YPOS, "%c%s %15q" S_Hz, lm1,  "STOP", get_sweep_frequency(ST_STOP));
     } else if (FREQ_IS_CENTERSPAN()) {
-      // start on the left, stop on the right (bare); center + bandwidth in the middle (below)
-      lcd_printf(FREQUENCIES_XPOS1, FREQUENCIES_YPOS, "%F", (float)get_sweep_frequency(ST_START));
-      lcd_printf(LCD_WIDTH - sFONT_STR_WIDTH(9), FREQUENCIES_YPOS, "%F", (float)get_sweep_frequency(ST_STOP));
+      // start on the left, stop on the right (bare MHz, 3 decimals); center + BW in the middle (below)
+      freq_t fa = get_sweep_frequency(ST_START) + 500, fb = get_sweep_frequency(ST_STOP) + 500;
+      lcd_printf(FREQUENCIES_XPOS1, FREQUENCIES_YPOS, "%u.%03uM", fa/1000000, (fa/1000)%1000);
+      lcd_printf(LCD_WIDTH - sFONT_STR_WIDTH(10), FREQUENCIES_YPOS, "%u.%03uM", fb/1000000, (fb/1000)%1000);
     }
   } else {
     lcd_printf(FREQUENCIES_XPOS1, FREQUENCIES_YPOS, "START 0" S_SECOND "    VF = %d%%", velocity_factor);
@@ -1629,10 +1630,11 @@ static void draw_frequencies(void) {
   // Center slot: center frequency + bandwidth in center/BW mode, otherwise
   // the IF bandwidth and point count.
   lcd_set_foreground(LCD_BW_TEXT_COLOR);
-  if ((props_mode & DOMAIN_MODE) == DOMAIN_FREQ && FREQ_IS_CENTERSPAN() && !FREQ_IS_CW())
-    lcd_printf(LCD_WIDTH/2 - sFONT_STR_WIDTH(12), FREQUENCIES_YPOS, "%cCENTER %F  %cBW %F",
-               lm0, (float)get_sweep_frequency(ST_CENTER), lm1, (float)get_sweep_frequency(ST_SPAN));
-  else
+  if ((props_mode & DOMAIN_MODE) == DOMAIN_FREQ && FREQ_IS_CENTERSPAN() && !FREQ_IS_CW()) {
+    freq_t fc = get_sweep_frequency(ST_CENTER) + 500;
+    lcd_printf(LCD_WIDTH/2 - sFONT_STR_WIDTH(13), FREQUENCIES_YPOS, "%cCENTER %u.%03uM  %cBW %F",
+               lm0, fc/1000000, (fc/1000)%1000, lm1, (float)get_sweep_frequency(ST_SPAN));
+  } else
     lcd_printf(FREQUENCIES_XPOS3, FREQUENCIES_YPOS,"BW:%u" S_Hz " %up", get_bandwidth_frequency(config._bandwidth), sweep_points);
   lcd_set_font(FONT_NORMAL);
 }
