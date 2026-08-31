@@ -884,11 +884,12 @@ config_t config = {
 properties_t current_props;
 
 // NanoVNA Default settings
+// NanoAnalyzer: S11 antenna-match traces only. Trace 0 (SWR) shown by default.
 static const trace_t def_trace[TRACES_MAX] = {//enable, type, channel, smith format, scale, refpos
-  { TRUE, TRC_LOGMAG, 0,   MS_RX, 10.0, NGRIDY-1 },
-  { TRUE, TRC_LOGMAG, 1, MS_REIM, 10.0, NGRIDY-1 },
-  { TRUE, TRC_SMITH,  0,   MS_RX, 1.0,         0 },
-  { TRUE, TRC_PHASE,  1, MS_REIM, 90.0, NGRIDY/2 }
+  { TRUE,  TRC_SWR, 0, MS_RX,   0.25,        0 },
+  { FALSE, TRC_R,   0, MS_RX, 100.0,         0 },
+  { FALSE, TRC_X,   0, MS_RX, 100.0, NGRIDY/2 },
+  { FALSE, TRC_Z,   0, MS_RX,  50.0,         0 }
 };
 
 static const marker_t def_markers[MARKERS_MAX] = {
@@ -1104,6 +1105,9 @@ static uint16_t get_sweep_mask(void){
     if ((trace[t].channel&1) == 0) ch_mask|= SWEEP_CH0_MEASURE;
     else/*if (trace[t].channel == 1)*/ ch_mask|= SWEEP_CH1_MEASURE;
   }
+#elif defined(__REFLECTION_ONLY__)
+  // NanoAnalyzer: S11 reflection only, never drive the CH1 (through) path
+  ch_mask|= SWEEP_CH0_MEASURE;
 #else
   // sweep 2 channels in any case
   ch_mask|= SWEEP_CH0_MEASURE|SWEEP_CH1_MEASURE;

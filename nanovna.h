@@ -49,7 +49,8 @@
 // Add RTC backup registers support
 #define __USE_BACKUP__
 // Add SD card support, req enable RTC (additional settings for file system see FatFS lib ffconf.h)
-#define __USE_SD_CARD__
+// NanoAnalyzer: removed (not needed for antenna analyzer)
+//#define __USE_SD_CARD__
 // Use unique serial string for USB
 #define __USB_UID__
 // If enabled serial in halconf.h, possible enable serial console control
@@ -57,7 +58,8 @@
 // Add show y grid line values option
 #define __USE_GRID_VALUES__
 // Add remote desktop option
-#define __REMOTE_DESKTOP__
+// NanoAnalyzer: removed
+//#define __REMOTE_DESKTOP__
 // Add RLE8 compression capture image format
 #define __CAPTURE_RLE8__
 // Allow flip display
@@ -73,7 +75,8 @@
 // Use cache for window function used by FFT (but need FFT_SIZE*sizeof(float) RAM)
 //#define USE_FFT_WINDOW_BUFFER
 // Enable data smooth option
-#define __USE_SMOOTH__
+// NanoAnalyzer: removed
+//#define __USE_SMOOTH__
 // Enable optional change digit separator for locales (dot or comma, need for correct work some external software)
 #define __DIGIT_SEPARATOR__
 // Use table for frequency list (if disabled use real time calc)
@@ -83,9 +86,14 @@
 #define __USE_DSP__
 #endif
 // Add measure module option (allow made some measure calculations on data)
-#define __VNA_MEASURE_MODULE__
+// NanoAnalyzer: removed (LC match / cable / resonance / S21 measures)
+//#define __VNA_MEASURE_MODULE__
 // Add Z normalization feature
 //#define __VNA_Z_RENORMALIZATION__
+
+// NanoAnalyzer: S11 reflection-only. Skips the CH1 (S21/through) sweep and its
+// calibration standards; drops S21-derived trace types from the UI.
+#define __REFLECTION_ONLY__
 
 /*
  * Submodules defines
