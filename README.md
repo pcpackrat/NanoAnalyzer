@@ -1,4 +1,4 @@
-# NanoAnalyzer-H4
+# NanoAnalyzer
 
 Simplified **antenna analyzer** firmware for the **NanoVNA-H4**.
 

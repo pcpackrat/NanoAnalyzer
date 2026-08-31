@@ -1,73 +1,151 @@
 ##############################################################################
-# NanoAnalyzer build - NanoVNA-H4 (STM32F303) only
-##############################################################################
+# Build global options
+# NOTE: Can be overridden externally.
+#
 
-# Compiler options
-ifeq ($(USE_OPT),)
-USE_OPT = -O2 -fno-inline-small-functions -ggdb -fomit-frame-pointer -falign-functions=16 --specs=nano.specs -fstack-usage -std=c11
+#Build target
+ifeq ($(TARGET),)
+  TARGET = F303
 endif
-USE_OPT+= -ffast-math -fsingle-precision-constant
-USE_OPT+= -fno-reorder-blocks
+#TARGET=F303
 
+# Compiler options here.
+ifeq ($(USE_OPT),)
+ ifeq ($(TARGET),F303)
+USE_OPT = -O2 -fno-inline-small-functions -ggdb -fomit-frame-pointer -falign-functions=16 --specs=nano.specs -fstack-usage -std=c11
+#USE_OPT+=-fstack-protector-strong
+ else
+USE_OPT = -O2 -fno-inline-small-functions -ggdb -fomit-frame-pointer -falign-functions=16 --specs=nano.specs -fstack-usage -std=c11
+ endif
+endif
+# additional options, use math optimisations
+USE_OPT+= -ffast-math -fsingle-precision-constant
+# additional size optimisations (also give small speedup)
+USE_OPT+= -fno-reorder-blocks
+# small size optimisations (slowdown code)
+#USE_OPT+= -fno-jump-tables -fno-move-loop-invariants
+
+# C specific options here (added to USE_OPT).
 ifeq ($(USE_COPT),)
   USE_COPT =
 endif
+
+# C++ specific options here (added to USE_OPT).
 ifeq ($(USE_CPPOPT),)
   USE_CPPOPT = -fno-rtti
 endif
+
+# Enable this if you want the linker to remove unused code and data
 ifeq ($(USE_LINK_GC),)
   USE_LINK_GC = yes
 endif
+
+# Linker extra options here.
 ifeq ($(USE_LDOPT),)
   USE_LDOPT =
 endif
+
+# Enable this if you want link time optimizations (LTO)
 ifeq ($(USE_LTO),)
   USE_LTO = no
 endif
+
+# If enabled, this option allows to compile the application in THUMB mode.
 ifeq ($(USE_THUMB),)
   USE_THUMB = yes
 endif
+
+# Enable this if you want to see the full log while compiling.
 ifeq ($(USE_VERBOSE_COMPILE),)
   USE_VERBOSE_COMPILE = no
 endif
+
+# If enabled, this option makes the build process faster by not compiling
+# modules not used in the current configuration.
 ifeq ($(USE_SMART_BUILD),)
   USE_SMART_BUILD = yes
 endif
+
+#
+# Build global options
+##############################################################################
 
 ifeq ($(VERSION),)
   VERSION="$(shell git describe --tags 2>/dev/null || echo v0)"
 endif
 
 ##############################################################################
-# Architecture / project options
+# Architecture or project specific options
 #
-USE_FPU = hard
+ifeq ($(TARGET),F303)
+  USE_FPU = hard
+endif
 
+# Stack size to be allocated to the Cortex-M process stack. This stack is
+# the stack used by the main() thread.
 ifeq ($(USE_PROCESS_STACKSIZE),)
   USE_PROCESS_STACKSIZE = 0x200
 endif
+# Stack size to the allocated to the Cortex-M main/exceptions stack. This
+# stack is used for processing interrupts and exceptions.
 ifeq ($(USE_EXCEPTIONS_STACKSIZE),)
   USE_EXCEPTIONS_STACKSIZE = 0x100
 endif
+#
+# Architecture or project specific options
+##############################################################################
 
 ##############################################################################
 # Project, sources and paths
 #
-PROJECT = H4
+
+# Define project name here
+ifeq ($(TARGET),F303)
+  PROJECT = H4
+else
+  PROJECT = H
+endif
+
+# Imported source files and paths
+#CHIBIOS = ../ChibiOS-RT
 CHIBIOS = ChibiOS
 PROJ = .
+# Startup files.
+# HAL-OSAL files (optional).
+ifeq ($(TARGET),F303)
+ include $(CHIBIOS)/os/common/startup/ARMCMx/compilers/GCC/mk/startup_stm32f3xx.mk
+ include $(CHIBIOS)/os/hal/hal.mk
+ include $(CHIBIOS)/os/hal/ports/STM32/STM32F3xx/platform.mk
+ include NANOVNA_STM32_F303/board.mk
+else
+ include $(CHIBIOS)/os/common/startup/ARMCMx/compilers/GCC/mk/startup_stm32f0xx.mk
+ include $(CHIBIOS)/os/hal/hal.mk
+ include $(CHIBIOS)/os/hal/ports/STM32/STM32F0xx/platform.mk
+ include NANOVNA_STM32_F072/board.mk
+endif
 
-include $(CHIBIOS)/os/common/startup/ARMCMx/compilers/GCC/mk/startup_stm32f3xx.mk
-include $(CHIBIOS)/os/hal/hal.mk
-include $(CHIBIOS)/os/hal/ports/STM32/STM32F3xx/platform.mk
-include NANOVNA_STM32_F303/board.mk
 include $(CHIBIOS)/os/hal/osal/rt/osal.mk
+# RTOS files (optional).
 include $(CHIBIOS)/os/rt/rt.mk
+ifeq ($(TARGET),F303)
 include $(CHIBIOS)/os/common/ports/ARMCMx/compilers/GCC/mk/port_v7m.mk
+else
+include $(CHIBIOS)/os/common/ports/ARMCMx/compilers/GCC/mk/port_v6m.mk
+endif
+# Other files (optional).
+#include $(CHIBIOS)/test/rt/test.mk
 include $(CHIBIOS)/os/hal/lib/streams/streams.mk
+#include $(CHIBIOS)/os/various/shell/shell.mk
 
-LDSCRIPT = NANOVNA_STM32_F303/STM32F303xC.ld
+# Define linker script file here
+ifeq ($(TARGET),F303)
+ LDSCRIPT= NANOVNA_STM32_F303/STM32F303xC.ld
+else
+ LDSCRIPT= NANOVNA_STM32_F072/STM32F072xB.ld
+endif
 
+# C sources that can be compiled in ARM or THUMB mode depending on the global
+# setting.
 CSRC = $(STARTUPSRC) \
        $(KERNSRC) \
        $(PORTSRC) \
@@ -86,26 +164,60 @@ CSRC = $(STARTUPSRC) \
        usbcfg.c \
        main.c common.c si5351.c tlv320aic3204.c dsp.c plot.c ui.c lcd.c data_storage.c hardware.c vna_math.c bands.c
 
+# C++ sources that can be compiled in ARM or THUMB mode depending on the global
+# setting.
 CPPSRC =
+
+# C sources to be compiled in ARM mode regardless of the global setting.
+# NOTE: Mixing ARM and THUMB mode enables the -mthumb-interwork compiler
+#       option that results in lower performance and larger code size.
 ACSRC =
+
+# C++ sources to be compiled in ARM mode regardless of the global setting.
+# NOTE: Mixing ARM and THUMB mode enables the -mthumb-interwork compiler
+#       option that results in lower performance and larger code size.
 ACPPSRC =
+
+# C sources to be compiled in THUMB mode regardless of the global setting.
+# NOTE: Mixing ARM and THUMB mode enables the -mthumb-interwork compiler
+#       option that results in lower performance and larger code size.
 TCSRC =
+
+# C sources to be compiled in THUMB mode regardless of the global setting.
+# NOTE: Mixing ARM and THUMB mode enables the -mthumb-interwork compiler
+#       option that results in lower performance and larger code size.
 TCPPSRC =
+
+# List ASM source files here
 ASMSRC = $(STARTUPASM) $(PORTASM) $(OSALASM)
 
 INCDIR = $(STARTUPINC) $(KERNINC) $(PORTINC) $(OSALINC) \
-         $(HALINC) $(PLATFORMINC) $(BOARDINC) \
+         $(HALINC) $(PLATFORMINC) $(BOARDINC)  \
          $(STREAMSINC)
+
+#
+# Project, sources and paths
+##############################################################################
 
 ##############################################################################
 # Compiler settings
 #
-MCU  = cortex-m4
 
+ifeq ($(TARGET),F303)
+ MCU  = cortex-m4
+else
+ MCU  = cortex-m0
+endif
+
+#TRGT = arm-elf-
 TRGT = arm-none-eabi-
 CC   = $(TRGT)gcc
 CPPC = $(TRGT)g++
+# Enable loading with g++ only if you need C++ runtime support.
+# NOTE: You can use C++ even without C++ support if you are careful. C++
+#       runtime support makes code size explode.
 LD   = $(TRGT)gcc
+#LD   = $(TRGT)g++
 CP   = $(TRGT)objcopy
 AS   = $(TRGT)gcc -x assembler-with-cpp
 AR   = $(TRGT)ar
@@ -115,24 +227,57 @@ HEX  = $(CP) -O ihex
 BIN  = $(CP) -O binary
 ELF  = $(CP) -O elf
 
+# ARM-specific options here
 AOPT =
+
+# THUMB-specific options here
 TOPT = -mthumb -DTHUMB
+
+# Define C warning options here
 CWARN = -Wall -Wextra -Wundef -Wstrict-prototypes
+
+# Define C++ warning options here
 CPPWARN = -Wall -Wextra -Wundef
 
-##############################################################################
-# User defines
 #
-UDEFS = -DARM_MATH_CM4 -DVERSION=\"$(VERSION)\" -DNANOVNA_F303
-UDEFS+= -DVNA_AUTO_SELECT_RTC_SOURCE
+# Compiler settings
+##############################################################################
 
+##############################################################################
+# Start of user section
+#
+
+# List all user C define here, like -D_DEBUG=1
+ifeq ($(TARGET),F303)
+ UDEFS = -DARM_MATH_CM4 -DVERSION=\"$(VERSION)\" -DNANOVNA_F303
+else
+ UDEFS = -DARM_MATH_CM0 -DVERSION=\"$(VERSION)\" 
+endif
+#Enable if use RTC and need auto select source LSE or LSI
+UDEFS+= -DVNA_AUTO_SELECT_RTC_SOURCE
+#Enable if install external 32.768kHz clock quartz on PC14 and PC15 pins on STM32 CPU and no VNA_AUTO_SELECT_RTC_SOURCE
+#UDEFS+= -DVNA_USE_LSE
+#UDEFS+= -D__VNA_Z_RENORMALIZATION__ -D__VNA_FAST_RENDER__
+
+# Define ASM defines here
 UADEFS =
+
+# List all user directories here
 UINCDIR =
+
+# List the user directory to look for the libraries here
 ULIBDIR =
+
+# List all user libraries here
 ULIBS = -lm
+
+#
+# End of user defines
+##############################################################################
 
 RULESPATH = $(CHIBIOS)/os/common/startup/ARMCMx/compilers/GCC
 include $(RULESPATH)/rules.mk
 
 flash: build/$(PROJECT).bin
 	dfu-util -d 0483:df11 -a 0 -s 0x08000000:leave -D build/$(PROJECT).bin
+
