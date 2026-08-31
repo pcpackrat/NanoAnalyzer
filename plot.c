@@ -1504,12 +1504,12 @@ static void cell_draw_readout(int x0, int y0) {
   char sbuf[10], line[40];
   if (vna_isinff(s)) strcpy(sbuf, "10+"); else plot_printf(sbuf, sizeof sbuf, "%.2f", s);
   freq_t mf = getFrequency(idx) + 500;
-  const char *tag = "SWR MIN";
+  const char *tag = "SWR MIN (S)";
 
   if (display_mode == DISPLAY_GRAPH_DATA) {
-    plot_printf(line, sizeof line, "%s %u.%03uM  SWR %s", tag, (unsigned)(mf/1000000), (unsigned)((mf/1000)%1000), sbuf);
+    plot_printf(line, sizeof line, "%s  %u.%03u MHz", tag, (unsigned)(mf/1000000), (unsigned)((mf/1000)%1000));
     cell_str_scale(xb - x0, y1 - y0, 2, line);
-    plot_printf(line, sizeof line, "R %d   X %+d   IMP %d " S_OHM, r, x, z);
+    plot_printf(line, sizeof line, "SWR %s  R %d  X %+d  IMP %d " S_OHM, sbuf, r, x, z);
     cell_str_scale(xb - x0, y1 + 2 * FONT_STR_HEIGHT + 6 - y0, 2, line);
   } else { // DISPLAY_DATA
     plot_printf(line, sizeof line, "%s  %u.%03u MHz", tag, (unsigned)(mf/1000000), (unsigned)((mf/1000)%1000));
@@ -1665,11 +1665,13 @@ static void draw_cell(int x0, int y0) {
         // Draw marker plate
         lcd_set_foreground(LCD_TRACE_1_COLOR + t);
         cell_blit_bitmap(x, y, MARKER_WIDTH, MARKER_HEIGHT, plate);
-        // Draw marker number (the SWR-min marker is drawn as a plain plate)
-        if (i != TRACK_MARKER) {
-          lcd_set_foreground(LCD_TXT_SHADOW_COLOR);
+        // Draw the label: digit for user markers, "S" for the SWR-min marker
+        lcd_set_foreground(LCD_TXT_SHADOW_COLOR);
+        if (i == TRACK_MARKER)
+          cell_blit_bitmap(x + (MARKER_WIDTH - FONT_GET_WIDTH('S')) / 2, y + 1,
+                           FONT_GET_WIDTH('S'), FONT_GET_HEIGHT, FONT_GET_DATA('S'));
+        else
           cell_blit_bitmap(x, y, MARKER_WIDTH, MARKER_HEIGHT, marker);
-        }
       }
     }
   }
