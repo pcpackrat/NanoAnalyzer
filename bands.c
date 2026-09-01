@@ -14,7 +14,8 @@
 //   HF        : index 0..9
 //   VHF/UHF   : index 10..15
 //   SERVICE   : index 16..18
-//   CUSTOM    : index 19..27 (3 wide-range presets + 6 empty user slots)
+//   H4  CUSTOM: index 19..27 (3 wide-range presets + 6 empty user slots)
+//   H   USER  : index 19      (1 empty user slot)
 static const band_preset_t default_bands[BANDS_MAX] = {
   // ---- HF amateur ----
   { "160m",       1900000,     200000 },   // 1.800 - 2.000
@@ -38,11 +39,15 @@ static const band_preset_t default_bands[BANDS_MAX] = {
   { "GMRS/FRS", 465137500,    5175000 },   // 462.5500 - 467.7250
   { "MURS",     153210000,    2900000 },   // 151.820 - 154.600
   { "CB",        27185000,     450000 },   // 26.965 - 27.405 (edit wider for freeband)
+#if defined(NANOVNA_F303)
   // ---- CUSTOM: wide-range scans, then empty user slots ----
   { "1.7-54 M",   27850000,   52300000 },   // HF through 6 m
   { "118-160 M", 139000000,   42000000 },   // air band through 2 m
   { "420-470 M", 445000000,   50000000 },   // 70 cm through GMRS
   // indices 22..27 left empty for user presets
+#else
+  // index 19 left empty for a user preset
+#endif
 };
 
 band_preset_t bands[BANDS_MAX];

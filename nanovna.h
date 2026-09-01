@@ -1420,7 +1420,11 @@ void clear_all_config_prop_data(void);
  * bands.c - NanoAnalyzer band presets (center frequency + bandwidth)
  */
 #define BAND_NAME_LEN 10
-#define BANDS_MAX     28
+#if defined(NANOVNA_F303)
+#define BANDS_MAX     28         // H4: 19 named + 3 wide-scan + 6 user slots
+#else
+#define BANDS_MAX     20         // H (F072): 19 named + 1 user slot (RAM limited)
+#endif
 typedef struct {
   char   name[BAND_NAME_LEN];
   freq_t center;

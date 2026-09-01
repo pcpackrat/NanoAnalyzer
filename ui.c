@@ -2073,9 +2073,13 @@ static const menuitem_t menu_bands_svc[] = {
   { MT_ADV_CALLBACK, 16, "%s", menu_band_acb },
   { MT_ADV_CALLBACK, 17, "%s", menu_band_acb },
   { MT_ADV_CALLBACK, 18, "%s", menu_band_acb },
+#if !defined(NANOVNA_F303)
+  { MT_ADV_CALLBACK, 19, "%s", menu_band_acb },   // H: single user slot
+#endif
   { MT_NEXT, 0, NULL, menu_back } // next-> menu_back
 };
 
+#if defined(NANOVNA_F303)
 static const menuitem_t menu_bands_custom[] = {
   { MT_ADV_CALLBACK, 19, "%s", menu_band_acb },
   { MT_ADV_CALLBACK, 20, "%s", menu_band_acb },
@@ -2088,12 +2092,15 @@ static const menuitem_t menu_bands_custom[] = {
   { MT_ADV_CALLBACK, 27, "%s", menu_band_acb },
   { MT_NEXT, 0, NULL, menu_back } // next-> menu_back
 };
+#endif
 
 const menuitem_t menu_bands[] = {
   { MT_SUBMENU, 0, "HF\n 160-10m",   menu_bands_hf },
   { MT_SUBMENU, 0, "VHF / UHF",      menu_bands_vu },
   { MT_SUBMENU, 0, "GMRS / MURS\n / CB", menu_bands_svc },
+#if defined(NANOVNA_F303)
   { MT_SUBMENU, 0, "CUSTOM",         menu_bands_custom },
+#endif
   { MT_NEXT, 0, NULL, menu_back } // next-> menu_back
 };
 
