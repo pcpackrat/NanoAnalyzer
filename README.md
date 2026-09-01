@@ -10,7 +10,7 @@ menus) is removed.
 
 ## Features
 
-- **Reflection-only S11** — faster sweeps, one-port SOL calibration.
+- **Reflection-only S11** — faster sweeps, one-port Short-Open-Load (SOL) calibration.
 - **Center frequency + bandwidth** entry model (not start/stop).
 - **Band presets** — every US amateur band (160 m – 23 cm), GMRS/FRS, MURS, CB,
   plus a CUSTOM group with wide-scan presets and editable user slots. Each preset
