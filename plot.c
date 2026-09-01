@@ -29,9 +29,18 @@ static uint16_t redraw_request = 0; // contains REDRAW_XXX flags
 static uint16_t area_width  = AREA_WIDTH_NORMAL;
 static uint16_t area_height = AREA_HEIGHT_NORMAL;
 
-// NanoAnalyzer: the graph shrinks in the data layouts to leave a readout strip below it
+// NanoAnalyzer: the graph shrinks in the data layouts to leave a readout strip below it.
+// Values are screen-size specific: the H4 (480x320) has room for scale-2 readout text,
+// the H (320x240) does not, so it uses scale-1 text and a taller graph.
+#ifdef LCD_480x320
 #define PLOT_H_DATA        176
 #define PLOT_H_GRAPH_DATA  228
+#define READOUT_TEXT_SCALE   2
+#else
+#define PLOT_H_DATA        120
+#define PLOT_H_GRAPH_DATA  176
+#define READOUT_TEXT_SCALE   1
+#endif
 static inline int plot_h(void) {
   return display_mode == DISPLAY_DATA       ? PLOT_H_DATA :
          display_mode == DISPLAY_GRAPH_DATA ? PLOT_H_GRAPH_DATA : HEIGHT;
@@ -1479,6 +1488,7 @@ static void cell_draw_readout(int x0, int y0) {
   const int yb = plot_h() + 1;                       // range line, right under the graph
   if (y0 + CELLHEIGHT <= yb) return;                 // cell entirely in the graph area
   lcd_set_foreground(LCD_FG_COLOR);
+  cell_set_font(FONT_NORMAL);                        // marker info may have left the small font set
 
   // range line: start far left, center at graph centre, BW between center and stop, stop far right
   char fs[16], fc_[16], fe_[16], bw[12];
@@ -1506,19 +1516,22 @@ static void cell_draw_readout(int x0, int y0) {
   freq_t mf = getFrequency(idx) + 500;
   const char *tag = "SWR MIN (S)";
 
+  const int tsc  = READOUT_TEXT_SCALE;
+  const int lstep = tsc * FONT_STR_HEIGHT + 6;       // row pitch for the readout text lines
+
   if (display_mode == DISPLAY_GRAPH_DATA) {
     plot_printf(line, sizeof line, "%s  %u.%03u MHz", tag, (unsigned)(mf/1000000), (unsigned)((mf/1000)%1000));
-    cell_str_scale(xb - x0, y1 - y0, 2, line);
+    cell_str_scale(xb - x0, y1 - y0, tsc, line);
     plot_printf(line, sizeof line, "SWR %s  R %d  X %+d  IMP %d " S_OHM, sbuf, r, x, z);
-    cell_str_scale(xb - x0, y1 + 2 * FONT_STR_HEIGHT + 6 - y0, 2, line);
+    cell_str_scale(xb - x0, y1 + lstep - y0, tsc, line);
   } else { // DISPLAY_DATA
     plot_printf(line, sizeof line, "%s  %u.%03u MHz", tag, (unsigned)(mf/1000000), (unsigned)((mf/1000)%1000));
-    cell_str_scale(xb - x0, y1 - y0, 2, line);
-    int yn = y1 + 2 * FONT_STR_HEIGHT + 6;
-    cell_str_scale(xb - x0, yn + (NUM_FONT_GET_HEIGHT * 2 - 2 * FONT_GET_HEIGHT) / 2 - y0, 2, "SWR");
+    cell_str_scale(xb - x0, y1 - y0, tsc, line);
+    int yn = y1 + lstep;
+    cell_str_scale(xb - x0, yn + (NUM_FONT_GET_HEIGHT * 2 - tsc * FONT_GET_HEIGHT) / 2 - y0, tsc, "SWR");
     cell_draw_bignum(xb + 8 * FONT_WIDTH - x0, yn - y0, sbuf, 2);
     plot_printf(line, sizeof line, "R %d   X %+d   IMP %d " S_OHM, r, x, z);
-    cell_str_scale(xb - x0, yn + NUM_FONT_GET_HEIGHT * 2 + 6 - y0, 2, line);
+    cell_str_scale(xb - x0, yn + NUM_FONT_GET_HEIGHT * 2 + 6 - y0, tsc, line);
   }
 }
 
